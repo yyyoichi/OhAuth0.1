@@ -1,0 +1,15 @@
+syntax = "proto3";
+package api.v1;
+option go_package = "github.com/yyyoichi/OhAuth0.1/gen/api/v1;apiv1";
+
+service GreetService {
+	rpc GreetStream(GreetStreamRequest) returns (stream GreetStreamResponse);
+}
+
+message GreetStreamRequest {
+    uint32 how_many_people = 1;
+}
+
+message GreetStreamResponse {
+	string greet = 1;
+}
