@@ -3,14 +3,18 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
+	"sync"
+	"time"
 )
 
 // Define a simple to understand the structure of OAuth2.0
 type (
 	Database struct {
-		userByID          map[string]UserProfile
-		serviceClientByID map[string]ServiceClient
+		userByID                map[string]UserProfile
+		serviceClientByID       map[string]ServiceClient
+		authorizationCodeByCode map[string]AuthorizationCode
+		accessTokenByToken      map[string]AccessToken
+		mu                      sync.Mutex
 	}
 	// OhAuth0.1を利用しているユーザ情報
 	UserProfile struct {
@@ -27,7 +31,23 @@ type (
 		Secret      string
 		Name        string
 		RedirectURI string
-		Scope       string // いつもプロフィールの閲覧
+		Scope       string // profile:view
+	}
+
+	// 認可コード
+	AuthorizationCode struct {
+		Code                    string
+		UserID, ServiceClientID string
+		Expires                 time.Time
+		Scope                   string // profile:view
+	}
+
+	// アクセストークン
+	AccessToken struct {
+		Token                   string
+		UserID, ServiceClientID string
+		Expires                 time.Time
+		Scope                   string // profile:view
 	}
 )
 
@@ -42,16 +62,15 @@ func NewDatabase() (*Database, error) {
 		"500": {"500", "secret", "ABC-App", "", "profile:view"},
 		"501": {"501", "secret", "ZZZ-App", "", "profile:view"},
 	}
+	db.authorizationCodeByCode = make(map[string]AuthorizationCode)
+	db.accessTokenByToken = make(map[string]AccessToken)
 	return &db, nil
 }
 
-func (db *Database) Login(ctx context.Context, id, pass string) (*UserProfile, error) {
+func (db *Database) GetUserByID(ctx context.Context, id string) (*UserProfile, error) {
 	u, found := db.userByID[id]
 	if !found {
 		return nil, ErrNotFound
-	}
-	if u.password != pass {
-		return nil, fmt.Errorf("password is invalid")
 	}
 	return &u, nil
 }
@@ -64,6 +83,43 @@ func (db *Database) GetServieClientByID(ctx context.Context, id string) (*Servic
 	return &c, nil
 }
 
+func (db *Database) GetAuthorizationCodeByCode(ctx context.Context, code string) (*AuthorizationCode, error) {
+	c, found := db.authorizationCodeByCode[code]
+	if !found {
+		return nil, ErrNotFound
+	}
+	return &c, nil
+}
+
+func (db *Database) CreateAuthorizationCode(ctx context.Context, row AuthorizationCode) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if _, found := db.authorizationCodeByCode[row.Code]; found {
+		return ErrAlreadyExists
+	}
+	db.authorizationCodeByCode[row.Code] = row
+	return nil
+}
+
+func (db *Database) GetAccessTokenByToken(ctx context.Context, token string) (*AccessToken, error) {
+	t, found := db.accessTokenByToken[token]
+	if !found {
+		return nil, ErrNotFound
+	}
+	return &t, nil
+}
+
+func (db *Database) CreateAccessToken(ctx context.Context, row AccessToken) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if _, found := db.accessTokenByToken[row.Token]; found {
+		return ErrAlreadyExists
+	}
+	db.accessTokenByToken[row.Token] = row
+	return nil
+}
+
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound      = errors.New("not found")
+	ErrAlreadyExists = errors.New("already exists")
 )
