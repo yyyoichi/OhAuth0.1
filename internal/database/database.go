@@ -14,6 +14,7 @@ type (
 		serviceClientByID       map[string]ServiceClient
 		authorizationCodeByCode map[string]AuthorizationCode
 		accessTokenByToken      map[string]AccessToken
+		refreshTokenByToken     map[string]RefreshToken
 		mu                      sync.Mutex
 	}
 	// OhAuth0.1を利用しているユーザ情報
@@ -49,6 +50,14 @@ type (
 		Expires                 time.Time
 		Scope                   string // profile:view
 	}
+
+	// リフレッシュトークン
+	RefreshToken struct {
+		Token                   string
+		UserID, ServiceClientID string
+		Expires                 time.Time
+		Scope                   string // profile:view
+	}
 )
 
 func NewDatabase() (*Database, error) {
@@ -64,6 +73,7 @@ func NewDatabase() (*Database, error) {
 	}
 	db.authorizationCodeByCode = make(map[string]AuthorizationCode)
 	db.accessTokenByToken = make(map[string]AccessToken)
+	db.refreshTokenByToken = make(map[string]RefreshToken)
 	return &db, nil
 }
 
@@ -116,6 +126,24 @@ func (db *Database) CreateAccessToken(ctx context.Context, row AccessToken) erro
 		return ErrAlreadyExists
 	}
 	db.accessTokenByToken[row.Token] = row
+	return nil
+}
+
+func (db *Database) GetRefreshTokenByToken(ctx context.Context, token string) (*RefreshToken, error) {
+	t, found := db.refreshTokenByToken[token]
+	if !found {
+		return nil, ErrNotFound
+	}
+	return &t, nil
+}
+
+func (db *Database) CreateRefreshToken(ctx context.Context, row RefreshToken) error {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+	if _, found := db.refreshTokenByToken[row.Token]; found {
+		return ErrAlreadyExists
+	}
+	db.refreshTokenByToken[row.Token] = row
 	return nil
 }
 
