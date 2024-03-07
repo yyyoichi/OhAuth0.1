@@ -21,7 +21,7 @@ type (
 	UserProfile struct {
 		ID string
 		// store no-hashed passwards
-		password string
+		Password string
 		Name     string
 		Age      uint8
 		Profile  string
