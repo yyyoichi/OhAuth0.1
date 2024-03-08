@@ -23,7 +23,7 @@ func SetupRouter() *gin.Engine {
 
 	v1.GET("/clients/:client_id", func(ctx *gin.Context) {
 		var req ServiceClientGetRequest
-		if err := ctx.Bind(&req); err != nil {
+		if err := ctx.BindUri(&req); err != nil {
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
@@ -48,12 +48,12 @@ func SetupRouter() *gin.Engine {
 
 	v1.POST("/authentication", func(ctx *gin.Context) {
 		var req AuthenticationRequest
-		if err := ctx.Bind(&req); err != nil {
+		if err := ctx.ShouldBindJSON(&req); err != nil {
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
 		slog.InfoContext(ctx, "recieve", "body", req)
-		claims, err := service.Authentication(ctx, req.ClientID, req.Password)
+		claims, err := service.Authentication(ctx, req.UserID, req.Password)
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot authenticate: %v", err))
 			if errors.Is(err, database.ErrNotFound) || errors.Is(err, ErrNoMatchPassword) {
