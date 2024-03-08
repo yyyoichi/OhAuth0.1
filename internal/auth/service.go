@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/yyyoichi/OhAuth0.1/internal/database"
 )
 
@@ -22,7 +23,9 @@ type (
 )
 
 var (
-	ErrNoMatchPassword = errors.New("no match password")
+	ErrNoMatchPassword          = errors.New("no match password")
+	ErrAuthorizationCodeExpired = errors.New("authorization code is expired")
+	ErrRefreshTokenExpired      = errors.New("refresh token is expired")
 )
 
 func NewService(config Config) *Service {
@@ -71,4 +74,98 @@ func (s *Service) ParseMyClaims(ctx context.Context, ss string, secret []byte) (
 		return nil, errors.New("unexpected")
 	}
 	return claims, nil
+}
+
+type NewAuthorizationCodeConfig struct {
+	UserID, ServiceClientID string
+	// Scope string
+}
+
+// 認可コードを発行する
+func (s *Service) NewAuthorizationCode(ctx context.Context, config NewAuthorizationCodeConfig) (*database.AuthorizationCode, error) {
+	row := database.AuthorizationCode{
+		UserID:          config.UserID,
+		ServiceClientID: config.ServiceClientID,
+		Expires:         time.Now().Add(time.Duration(10) * time.Minute),
+		Scope:           "profile:view",
+		Code:            uuid.NewString(),
+	}
+	if err := s.Database.CreateAuthorizationCode(ctx, row); err != nil {
+		return nil, err
+	}
+	return &row, nil
+}
+
+// 認可コード[code]を検証しアクセストークンを発行する
+func (s *Service) NewAccessToken(ctx context.Context, code string) (
+	*database.AccessToken,
+	*database.RefreshToken,
+	error,
+) {
+	authorization, err := s.Database.GetAuthorizationCodeByCode(ctx, code)
+	if err != nil {
+		return nil, nil, err
+	}
+	if time.Now().After(authorization.Expires) {
+		return nil, nil, ErrAuthorizationCodeExpired
+	}
+	token := database.AccessToken{
+		Token:           uuid.NewString(),
+		UserID:          authorization.UserID,
+		ServiceClientID: authorization.ServiceClientID,
+		Scope:           authorization.Scope,
+		Expires:         time.Now().AddDate(0, 0, 3),
+	}
+	refresh := database.RefreshToken{
+		Token:           uuid.NewString(),
+		UserID:          authorization.UserID,
+		ServiceClientID: authorization.ServiceClientID,
+		Scope:           authorization.Scope,
+		Expires:         time.Now().AddDate(0, 1, 0),
+	}
+	if err := s.Database.CreateAccessToken(ctx, token); err != nil {
+		return nil, nil, err
+	}
+	if err := s.Database.CreateRefreshToken(ctx, refresh); err != nil {
+		return nil, nil, err
+	}
+
+	return &token, &refresh, nil
+}
+
+// [refreshToken]から新しくアクセストークンを発行する
+func (s *Service) UpdateAccessToken(ctx context.Context, refreshToken string) (
+	*database.AccessToken,
+	*database.RefreshToken,
+	error,
+) {
+	refresh, err := s.Database.GetRefreshTokenByToken(ctx, refreshToken)
+	if err != nil {
+		return nil, nil, err
+	}
+	if time.Now().After(refresh.Expires) {
+		return nil, nil, ErrRefreshTokenExpired
+	}
+	updateToken := database.AccessToken{
+		Token:           uuid.NewString(),
+		UserID:          refresh.UserID,
+		ServiceClientID: refresh.ServiceClientID,
+		Scope:           refresh.Scope,
+		Expires:         time.Now().AddDate(0, 0, 3),
+	}
+	updateRefresh := database.RefreshToken{
+		Token:           uuid.NewString(),
+		UserID:          refresh.UserID,
+		ServiceClientID: refresh.ServiceClientID,
+		Scope:           refresh.Scope,
+		Expires:         time.Now().AddDate(0, 1, 0),
+	}
+	if err := s.Database.CreateAccessToken(ctx, updateToken); err != nil {
+		return nil, nil, err
+	}
+	if err := s.Database.CreateRefreshToken(ctx, updateRefresh); err != nil {
+		return nil, nil, err
+	}
+
+	return &updateToken, &updateRefresh, nil
 }

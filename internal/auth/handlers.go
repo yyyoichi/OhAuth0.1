@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -78,31 +79,74 @@ func SetupRouter() *gin.Engine {
 	v1.POST("/authorization", func(ctx *gin.Context) {
 		var req AuthorizationRequest
 		if err := ctx.Bind(&req); err != nil {
-			ctx.JSON(http.StatusBadRequest, BadRequestMessage)
+			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
 		claims, err := service.ParseMyClaims(ctx, req.JWT, JWT_SECRET)
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot parse jwt: %v", err))
-			ctx.JSON(http.StatusBadRequest, BadRequestMessage)
+			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
 		if claims.ClientID != req.ClientID {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot match clientID jwt:%s, req:%s", claims.ClientID, req.ClientID))
-			ctx.JSON(http.StatusBadRequest, BadRequestMessage)
+			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
+
+		authorization, err := service.NewAuthorizationCode(ctx, NewAuthorizationCodeConfig{
+			UserID:          claims.ID,
+			ServiceClientID: claims.ClientID,
+		})
+		if err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("cannot get authorization code: %v", err))
+			ctx.SecureJSON(http.StatusInternalServerError, InternalServerErrorMessage)
+			return
+		}
+
 		var resp AuthorizationResponse
+		resp.Code = authorization.Code
 		ctx.SecureJSON(http.StatusOK, resp)
 	})
 
 	v1.POST("/accesstoken", func(ctx *gin.Context) {
 		var req AccessTokenRequest
 		if err := ctx.Bind(&req); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
+			return
+		}
+		// client secret
+		if client, err := service.GetServieClientByID(ctx, req.ClientID); err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("cannot get service client[%s]: %v", req.ClientID, err))
+			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
+		} else if req.ClientSecret != client.Secret {
+			slog.ErrorContext(ctx, fmt.Sprintf("client secret[%s] is invalid: %v", req.ClientSecret, err))
+			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
+			return
+		}
+
+		var token *database.AccessToken
+		var refresh *database.RefreshToken
+		var err error
+		switch {
+		case req.Code != "":
+			token, refresh, err = service.NewAccessToken(ctx, req.Code)
+		case req.RefreshToken != "":
+			token, refresh, err = service.UpdateAccessToken(ctx, req.RefreshToken)
+		}
+		if err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("cannot get tokens: %v", err))
+			if errors.Is(err, ErrAuthorizationCodeExpired) || errors.Is(err, ErrRefreshTokenExpired) {
+				ctx.SecureJSON(http.StatusBadRequest, gin.H{"error": "invalid_grant"})
+				return
+			}
+			ctx.SecureJSON(http.StatusInternalServerError, InternalServerErrorMessage)
 			return
 		}
 		var resp AccessTokenResponse
+		resp.AccessToken = token.Token
+		resp.RefreshToken = refresh.Token
+		resp.ExpiresIn = uint(time.Until(token.Expires).Seconds())
 		ctx.SecureJSON(http.StatusOK, resp)
 	})
 	return router
