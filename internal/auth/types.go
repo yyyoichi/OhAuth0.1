@@ -33,7 +33,6 @@ type (
 		Scope        string `json:"scope" binding:"required"`
 	}
 	AuthorizationResponse struct {
-		// redirect URI (expected in server) preconfigured for each client with authorization_code
 		Code string `json:"code"`
 	}
 )
@@ -44,7 +43,7 @@ type (
 		GrantType    string `json:"grant_type" binding:"required"` // must 'authorization_code'
 		ClientID     string `json:"client_id" binding:"required"`
 		ClientSecret string `json:"client_secret" binding:"required"`
-		Code         string `json:"code" binding:"required"`
+		Code         string `json:"code" binding:"-"`
 		RefreshToken string `json:"refresh_token" binding:"-"`
 	}
 	AccessTokenResponse struct {

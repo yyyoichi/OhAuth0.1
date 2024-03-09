@@ -14,12 +14,10 @@ import (
 
 var JWT_SECRET = []byte("JWT_SECRET")
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(service *Service) *gin.Engine {
 	router := gin.Default()
 	api := router.Group("/api")
 	v1 := api.Group("/v1")
-
-	service := NewService(Config{})
 
 	v1.GET("/clients/:client_id", func(ctx *gin.Context) {
 		var req ServiceClientGetRequest
@@ -60,6 +58,10 @@ func SetupRouter() *gin.Engine {
 				ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 				return
 			}
+			if errors.Is(err, database.ErrNotFound) {
+				ctx.SecureJSON(http.StatusNotFound, NotFoundMessage)
+				return
+			}
 			ctx.SecureJSON(http.StatusInternalServerError, InternalServerErrorMessage)
 			return
 		}
@@ -78,7 +80,7 @@ func SetupRouter() *gin.Engine {
 
 	v1.POST("/authorization", func(ctx *gin.Context) {
 		var req AuthorizationRequest
-		if err := ctx.Bind(&req); err != nil {
+		if err := ctx.ShouldBindJSON(&req); err != nil {
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
@@ -111,7 +113,7 @@ func SetupRouter() *gin.Engine {
 
 	v1.POST("/accesstoken", func(ctx *gin.Context) {
 		var req AccessTokenRequest
-		if err := ctx.Bind(&req); err != nil {
+		if err := ctx.ShouldBindJSON(&req); err != nil {
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
