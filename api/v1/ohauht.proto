@@ -1,0 +1,95 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+package api.v1;
+option go_package = "github.com/yyyoichi/OhAuth0.1/api/v1;apiv1";
+
+service DatabaseService {
+	rpc GetUser(stream GetUserRequest) returns (stream GetUserResponse);
+    rpc GetServiceClient(stream GetServiceClientRequest) returns(stream GetServiceClientResponse);
+    rpc GetAuthorizationCode(stream GetAuthorizationCodeRequest) returns (stream GetAuthorizationCodeResponse);
+    rpc CreateAuthorizationCode(stream CreateAuthorizationCodeRequest) returns (stream CreateAuthorizationCodeResponse);
+    rpc GetAccessToken(stream GetAccessTokenRequest) returns (stream GetAccessTokenResponse);
+    rpc CreateAccessToken(stream CreateAccessTokenRequest) returns (stream CreateAccessTokenResponse);
+    rpc GetRefreshToken(stream GetRefreshTokenRequest) returns (stream GetRefreshTokenResponse);
+    rpc CreateRefreshToken(stream CreateRefreshTokenRequest) returns (stream CreateRefreshTokenResponse);
+}
+
+message GetUserRequest {
+    string id = 1;
+}
+message GetUserResponse {
+	UserProfile user = 1;
+}
+message GetServiceClientRequest {
+    string id = 1;
+}
+message GetServiceClientResponse {
+    ServiceClient client = 1;
+}
+message GetAuthorizationCodeRequest {
+    string code = 1;
+}
+message GetAuthorizationCodeResponse {
+    AuthorizationCode code = 1;
+}
+message CreateAuthorizationCodeRequest {
+    AuthorizationCode code = 1;
+}
+message CreateAuthorizationCodeResponse {}
+message GetAccessTokenRequest {
+    string token = 1;
+}
+message GetAccessTokenResponse {
+    AccessToken token = 1;
+}
+message CreateAccessTokenRequest {
+    AccessToken token = 1;
+}
+message CreateAccessTokenResponse {}
+message GetRefreshTokenRequest {
+    string token = 1;
+}
+message GetRefreshTokenResponse {
+    RefreshToken token = 1;
+}
+message CreateRefreshTokenRequest {
+    RefreshToken token = 1;
+}
+message CreateRefreshTokenResponse {}
+
+message UserProfile {
+	string id = 1;
+    string password = 2;
+    string name = 3;
+    uint32 age = 4;
+    string profile = 5;
+}
+message ServiceClient {
+    string id = 1;
+    string secret = 2;
+    string name = 3;
+    string redirect_uri = 4;
+    string scope = 5;
+}
+message AuthorizationCode {
+    string code = 1;
+    string user_id = 2;
+    string service_client_id = 3;
+    google.protobuf.Timestamp expires = 4;
+    string scope = 5;
+}
+message AccessToken {
+    string token = 1;
+    string user_id = 2;
+    string service_client_id = 3;
+    google.protobuf.Timestamp expires = 4;
+    string scope = 5;
+}
+message RefreshToken {
+    string token = 1;
+    string user_id = 2;
+    string service_client_id = 3;
+    google.protobuf.Timestamp expires = 4;
+    string scope = 5;
+}
