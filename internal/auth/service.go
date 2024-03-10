@@ -76,6 +76,9 @@ func (s *Service) ParseMyClaims(ctx context.Context, ss string, secret []byte) (
 	token, err := jwt.ParseWithClaims(ss, &MyClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return secret, nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	if !token.Valid {
 		// switch {
 		// case token.Valid:

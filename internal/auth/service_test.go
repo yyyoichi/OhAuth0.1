@@ -19,6 +19,54 @@ func TestService(t *testing.T) {
 			client: db,
 		}
 	}
+	t.Run("Authentication", func(t *testing.T) {
+		test := []struct {
+			id, password string
+			expErr       error
+		}{
+			{"1", "password", nil},
+			{"1", "invalidpass", ErrNoMatchPassword},
+			{"99", "password", database.ErrNotFound},
+		}
+		ctx := context.Background()
+		for _, tt := range test {
+			tservice := newLocalService()
+			_, err := tservice.Authentication(ctx, tt.id, tt.password)
+			assert.ErrorIs(t, err, tt.expErr)
+		}
+	})
+	t.Run("ParseMyClaims", func(t *testing.T) {
+		token := func() string {
+			ctx := context.Background()
+			tservice := newLocalService()
+			claims, err := tservice.Authentication(ctx, "1", "password")
+			assert.NoError(t, err)
+			claims.ClientId = "hoge"
+			assert.NoError(t, err)
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+			ss, err := token.SignedString(JWT_SECRET)
+			assert.NoError(t, err)
+			return ss
+		}()
+		test := []struct {
+			ss     string
+			secret []byte
+			isNil  bool
+		}{
+			{token, JWT_SECRET, true},
+			{token, []byte("secret"), false},
+		}
+		ctx := context.Background()
+		for _, tt := range test {
+			tservice := newLocalService()
+			_, err := tservice.ParseMyClaims(ctx, tt.ss, tt.secret)
+			if tt.isNil {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		}
+	})
 	t.Run("JWT", func(t *testing.T) {
 		t.Parallel()
 		ctx := context.Background()
