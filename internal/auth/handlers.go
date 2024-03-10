@@ -98,7 +98,7 @@ func SetupRouter(service *Service) *gin.Engine {
 		}
 
 		authorization, err := service.NewAuthorizationCode(ctx, NewAuthorizationCodeConfig{
-			UserId:          claims.Id,
+			UserId:          claims.Subject,
 			ServiceClientId: claims.ClientId,
 		})
 		if err != nil {
