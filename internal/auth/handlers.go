@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	apiv1 "github.com/yyyoichi/OhAuth0.1/api/v1"
 	"github.com/yyyoichi/OhAuth0.1/internal/database"
 )
 
@@ -26,7 +27,7 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		slog.InfoContext(ctx, "recieve", "body", req)
-		client, err := service.GetServieClientByID(ctx, req.ClientID)
+		client, err := service.client.GetServieClientByID(ctx, req.ClientId)
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot get client: %v", err))
 			if errors.Is(err, database.ErrNotFound) {
@@ -38,9 +39,9 @@ func SetupRouter(service *Service) *gin.Engine {
 		}
 
 		var resp ServiceClientGetResponse
-		resp.ClientID = client.ID
-		resp.Name = client.Name
-		resp.Scope = client.Scope
+		resp.ClientId = client.GetId()
+		resp.Name = client.GetName()
+		resp.Scope = client.GetScope()
 		ctx.SecureJSON(http.StatusOK, resp)
 	})
 
@@ -51,7 +52,7 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		slog.InfoContext(ctx, "recieve", "body", req)
-		claims, err := service.Authentication(ctx, req.UserID, req.Password)
+		claims, err := service.Authentication(ctx, req.UserId, req.Password)
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot authenticate: %v", err))
 			if errors.Is(err, database.ErrNotFound) || errors.Is(err, ErrNoMatchPassword) {
@@ -65,7 +66,7 @@ func SetupRouter(service *Service) *gin.Engine {
 			ctx.SecureJSON(http.StatusInternalServerError, InternalServerErrorMessage)
 			return
 		}
-		claims.ClientID = req.ClientID // !
+		claims.ClientId = req.ClientId // !
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 		ss, err := token.SignedString(JWT_SECRET)
 		if err != nil {
@@ -90,15 +91,15 @@ func SetupRouter(service *Service) *gin.Engine {
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
-		if claims.ClientID != req.ClientID {
-			slog.ErrorContext(ctx, fmt.Sprintf("cannot match clientID jwt:%s, req:%s", claims.ClientID, req.ClientID))
+		if claims.ClientId != req.ClientId {
+			slog.ErrorContext(ctx, fmt.Sprintf("cannot match clientID jwt:%s, req:%s", claims.ClientId, req.ClientId))
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
 
 		authorization, err := service.NewAuthorizationCode(ctx, NewAuthorizationCodeConfig{
-			UserID:          claims.ID,
-			ServiceClientID: claims.ClientID,
+			UserId:          claims.ID,
+			ServiceClientId: claims.ClientId,
 		})
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot get authorization code: %v", err))
@@ -107,7 +108,7 @@ func SetupRouter(service *Service) *gin.Engine {
 		}
 
 		var resp AuthorizationResponse
-		resp.Code = authorization.Code
+		resp.Code = authorization.GetCode()
 		ctx.SecureJSON(http.StatusOK, resp)
 	})
 
@@ -118,8 +119,8 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		// client secret
-		if client, err := service.GetServieClientByID(ctx, req.ClientID); err != nil {
-			slog.ErrorContext(ctx, fmt.Sprintf("cannot get service client[%s]: %v", req.ClientID, err))
+		if client, err := service.client.GetServieClientByID(ctx, req.ClientId); err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("cannot get service client[%s]: %v", req.ClientId, err))
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 		} else if req.ClientSecret != client.Secret {
 			slog.ErrorContext(ctx, fmt.Sprintf("client secret[%s] is invalid: %v", req.ClientSecret, err))
@@ -127,8 +128,8 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 
-		var token *database.AccessToken
-		var refresh *database.RefreshToken
+		var token *apiv1.AccessToken
+		var refresh *apiv1.RefreshToken
 		var err error
 		switch {
 		case req.Code != "":
@@ -146,9 +147,9 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		var resp AccessTokenResponse
-		resp.AccessToken = token.Token
-		resp.RefreshToken = refresh.Token
-		resp.ExpiresIn = uint(time.Until(token.Expires).Seconds())
+		resp.AccessToken = token.GetToken()
+		resp.RefreshToken = refresh.GetToken()
+		resp.ExpiresIn = uint(time.Until(token.Expires.AsTime()).Seconds())
 		ctx.SecureJSON(http.StatusOK, resp)
 	})
 	return router

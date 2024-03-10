@@ -10,11 +10,15 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/yyyoichi/OhAuth0.1/internal/database"
 	server_test "github.com/yyyoichi/OhAuth0.1/internal/test"
 )
 
 func TestHandlerOK(t *testing.T) {
-	service := NewService(Config{})
+	db, _ := database.NewDatabase()
+	service := &Service{
+		client: db,
+	}
 	router := SetupRouter(service)
 	test := map[string]struct {
 		config  server_test.Config
@@ -39,8 +43,8 @@ func TestHandlerOK(t *testing.T) {
 			options: []server_test.Option{
 				server_test.WithBody(func() io.Reader {
 					req := AuthenticationRequest{
-						UserID:   "1",
-						ClientID: "501",
+						UserId:   "1",
+						ClientId: "501",
 						Password: "password",
 					}
 					b, _ := json.Marshal(req)
@@ -59,13 +63,13 @@ func TestHandlerOK(t *testing.T) {
 				server_test.WithBody(func() io.Reader {
 					claims, err := service.Authentication(context.Background(), "1", "password")
 					assert.NoError(t, err)
-					claims.ClientID = "501" // !
+					claims.ClientId = "501" // !
 					token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 					ss, err := token.SignedString(JWT_SECRET)
 					assert.NoError(t, err)
 					var req AuthorizationRequest
 					req.JWT = ss
-					req.ClientID = "501"
+					req.ClientId = "501"
 					req.ResponseType = "code"
 					req.Scope = "profile:view"
 					b, err := json.Marshal(req)
@@ -84,12 +88,12 @@ func TestHandlerOK(t *testing.T) {
 			options: []server_test.Option{
 				server_test.WithBody(func() io.Reader {
 					authorization, err := service.NewAuthorizationCode(context.Background(), NewAuthorizationCodeConfig{
-						UserID:          "1",
-						ServiceClientID: "501",
+						UserId:          "1",
+						ServiceClientId: "501",
 					})
 					assert.NoError(t, err)
 					var req AccessTokenRequest
-					req.ClientID = authorization.ServiceClientID
+					req.ClientId = authorization.ServiceClientId
 					req.ClientSecret = "secret"
 					req.Code = authorization.Code // !
 					req.GrantType = "authorization_code"
@@ -109,14 +113,14 @@ func TestHandlerOK(t *testing.T) {
 			options: []server_test.Option{
 				server_test.WithBody(func() io.Reader {
 					authorization, err := service.NewAuthorizationCode(context.Background(), NewAuthorizationCodeConfig{
-						UserID:          "1",
-						ServiceClientID: "501",
+						UserId:          "1",
+						ServiceClientId: "501",
 					})
 					assert.NoError(t, err)
 					_, refresh, err := service.NewAccessToken(context.Background(), authorization.Code)
 					assert.NoError(t, err)
 					var req AccessTokenRequest
-					req.ClientID = authorization.ServiceClientID
+					req.ClientId = authorization.ServiceClientId
 					req.ClientSecret = "secret"
 					req.RefreshToken = refresh.Token
 					req.GrantType = "authorization_code"

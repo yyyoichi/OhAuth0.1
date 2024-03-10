@@ -2,10 +2,10 @@ package auth
 
 type (
 	ServiceClientGetRequest struct {
-		ClientID string `uri:"client_id" binding:"required"`
+		ClientId string `uri:"client_id" binding:"required"`
 	}
 	ServiceClientGetResponse struct {
-		ClientID string `json:"client_id"`
+		ClientId string `json:"client_id"`
 		Name     string `json:"name"`
 		Scope    string `json:"scope"`
 	}
@@ -14,8 +14,8 @@ type (
 // 認証
 type (
 	AuthenticationRequest struct {
-		ClientID string `json:"client_id" binding:"required"`
-		UserID   string `json:"user_id" binding:"required"`
+		ClientId string `json:"client_id" binding:"required"`
+		UserId   string `json:"user_id" binding:"required"`
 		Password string `json:"password" binding:"required"`
 	}
 	AuthenticationResponse struct {
@@ -28,7 +28,7 @@ type (
 type (
 	AuthorizationRequest struct {
 		JWT          string `json:"jwt" binding:"required"`
-		ClientID     string `json:"client_id" binding:"required"`
+		ClientId     string `json:"client_id" binding:"required"`
 		ResponseType string `json:"response_type" binding:"required"` // must 'code'
 		Scope        string `json:"scope" binding:"required"`
 	}
@@ -41,7 +41,7 @@ type (
 type (
 	AccessTokenRequest struct {
 		GrantType    string `json:"grant_type" binding:"required"` // must 'authorization_code'
-		ClientID     string `json:"client_id" binding:"required"`
+		ClientId     string `json:"client_id" binding:"required"`
 		ClientSecret string `json:"client_secret" binding:"required"`
 		Code         string `json:"code" binding:"-"`
 		RefreshToken string `json:"refresh_token" binding:"-"`
