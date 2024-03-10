@@ -27,7 +27,7 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		slog.InfoContext(ctx, "recieve", "body", req)
-		client, err := service.client.GetServieClientByID(ctx, req.ClientId)
+		client, err := service.client.GetServieClientById(ctx, req.ClientId)
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot get client: %v", err))
 			if errors.Is(err, database.ErrNotFound) {
@@ -92,13 +92,13 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		if claims.ClientId != req.ClientId {
-			slog.ErrorContext(ctx, fmt.Sprintf("cannot match clientID jwt:%s, req:%s", claims.ClientId, req.ClientId))
+			slog.ErrorContext(ctx, fmt.Sprintf("cannot match clientId jwt:%s, req:%s", claims.ClientId, req.ClientId))
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 			return
 		}
 
 		authorization, err := service.NewAuthorizationCode(ctx, NewAuthorizationCodeConfig{
-			UserId:          claims.ID,
+			UserId:          claims.Id,
 			ServiceClientId: claims.ClientId,
 		})
 		if err != nil {
@@ -119,7 +119,7 @@ func SetupRouter(service *Service) *gin.Engine {
 			return
 		}
 		// client secret
-		if client, err := service.client.GetServieClientByID(ctx, req.ClientId); err != nil {
+		if client, err := service.client.GetServieClientById(ctx, req.ClientId); err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot get service client[%s]: %v", req.ClientId, err))
 			ctx.SecureJSON(http.StatusBadRequest, BadRequestMessage)
 		} else if req.ClientSecret != client.Secret {

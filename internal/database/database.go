@@ -10,8 +10,8 @@ import (
 
 // Define a simple to understand the structure of OAuth2.0
 type Database struct {
-	userByID                map[string]*apiv1.UserProfile
-	serviceClientByID       map[string]*apiv1.ServiceClient
+	userById                map[string]*apiv1.UserProfile
+	serviceClientById       map[string]*apiv1.ServiceClient
 	authorizationCodeByCode map[string]*apiv1.AuthorizationCode
 	accessTokenByToken      map[string]*apiv1.AccessToken
 	refreshTokenByToken     map[string]*apiv1.RefreshToken
@@ -20,7 +20,7 @@ type Database struct {
 
 func NewDatabase() (*Database, error) {
 	var db Database
-	db.userByID = map[string]*apiv1.UserProfile{
+	db.userById = map[string]*apiv1.UserProfile{
 		"1": {
 			Id:       "1",
 			Password: "password",
@@ -36,7 +36,7 @@ func NewDatabase() (*Database, error) {
 			Profile:  "Hello🌸",
 		},
 	}
-	db.serviceClientByID = map[string]*apiv1.ServiceClient{
+	db.serviceClientById = map[string]*apiv1.ServiceClient{
 		// TODO set RedirectURI
 		"500": {
 			Id:          "500",
@@ -59,16 +59,16 @@ func NewDatabase() (*Database, error) {
 	return &db, nil
 }
 
-func (db *Database) GetUserByID(ctx context.Context, id string) (*apiv1.UserProfile, error) {
-	u, found := db.userByID[id]
+func (db *Database) GetUserById(ctx context.Context, id string) (*apiv1.UserProfile, error) {
+	u, found := db.userById[id]
 	if !found {
 		return nil, ErrNotFound
 	}
 	return u, nil
 }
 
-func (db *Database) GetServieClientByID(ctx context.Context, id string) (*apiv1.ServiceClient, error) {
-	c, found := db.serviceClientByID[id]
+func (db *Database) GetServieClientById(ctx context.Context, id string) (*apiv1.ServiceClient, error) {
+	c, found := db.serviceClientById[id]
 	if !found {
 		return nil, ErrNotFound
 	}

@@ -58,7 +58,7 @@ func NewDatabaseClient(ctx context.Context, config ClientConfig) (*Client, error
 	return &client, nil
 }
 
-func (c *Client) GetUserByID(ctx context.Context, id string) (*apiv1.UserProfile, error) {
+func (c *Client) GetUserById(ctx context.Context, id string) (*apiv1.UserProfile, error) {
 	if err := c.guser.Send(&apiv1.GetUserRequest{
 		Id: id,
 	}); err != nil {
@@ -72,7 +72,7 @@ func (c *Client) GetUserByID(ctx context.Context, id string) (*apiv1.UserProfile
 	return resp.GetUser(), nil
 }
 
-func (c *Client) GetServieClientByID(ctx context.Context, id string) (*apiv1.ServiceClient, error) {
+func (c *Client) GetServieClientById(ctx context.Context, id string) (*apiv1.ServiceClient, error) {
 	if err := c.gserviceClient.Send(&apiv1.GetServiceClientRequest{
 		Id: id,
 	}); err != nil {

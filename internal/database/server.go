@@ -192,7 +192,7 @@ func (h *handler) GetServiceClient(ctx context.Context, stream *connect.BidiStre
 		} else if err != nil {
 			return err
 		}
-		client, err := h.Database.GetServieClientByID(ctx, msg.GetId())
+		client, err := h.Database.GetServieClientById(ctx, msg.GetId())
 		if err != nil {
 			return h.newConnectError(err)
 		}
@@ -215,7 +215,7 @@ func (h *handler) GetUser(ctx context.Context, stream *connect.BidiStream[apiv1.
 		} else if err != nil {
 			return err
 		}
-		user, err := h.Database.GetUserByID(ctx, msg.GetId())
+		user, err := h.Database.GetUserById(ctx, msg.GetId())
 		if err != nil {
 			return h.newConnectError(err)
 		}

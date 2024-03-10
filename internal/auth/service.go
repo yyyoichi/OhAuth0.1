@@ -18,8 +18,8 @@ type (
 		client clientInterface
 	}
 	clientInterface interface {
-		GetUserByID(ctx context.Context, id string) (*apiv1.UserProfile, error)
-		GetServieClientByID(ctx context.Context, id string) (*apiv1.ServiceClient, error)
+		GetUserById(ctx context.Context, id string) (*apiv1.UserProfile, error)
+		GetServieClientById(ctx context.Context, id string) (*apiv1.ServiceClient, error)
 		CreateAuthorizationCode(ctx context.Context, row *apiv1.AuthorizationCode) error
 		GetAuthorizationCodeByCode(ctx context.Context, code string) (*apiv1.AuthorizationCode, error)
 		CreateAccessToken(ctx context.Context, row *apiv1.AccessToken) error
@@ -55,7 +55,7 @@ func NewService(ctx context.Context, config Config) (*Service, error) {
 
 // UserIdと有効期限を詰めたClaimsを返す
 func (s *Service) Authentication(ctx context.Context, id, password string) (*MyClaims, error) {
-	u, err := s.client.GetUserByID(ctx, id)
+	u, err := s.client.GetUserById(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get user: %w", err)
 	}

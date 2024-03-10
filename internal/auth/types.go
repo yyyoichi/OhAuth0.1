@@ -19,7 +19,7 @@ type (
 		Password string `json:"password" binding:"required"`
 	}
 	AuthenticationResponse struct {
-		// set clientID, userID
+		// set clientId, userId
 		JWT string `json:"jwt"`
 	}
 )

@@ -53,15 +53,15 @@ func TestDatabase(t *testing.T) {
 
 func testdb(t *testing.T, db databaseInterface) {
 	ctx := context.Background()
-	user, err := db.GetUserByID(ctx, "1")
+	user, err := db.GetUserById(ctx, "1")
 	assert.NoError(t, err)
 	assert.NotZero(t, user)
-	_, err = db.GetUserByID(ctx, "999")
+	_, err = db.GetUserById(ctx, "999")
 	assert.ErrorIs(t, ErrNotFound, err)
-	client, err := db.GetServieClientByID(ctx, "500")
+	client, err := db.GetServieClientById(ctx, "500")
 	assert.NoError(t, err)
 	assert.NotZero(t, client)
-	_, err = db.GetServieClientByID(ctx, "999")
+	_, err = db.GetServieClientById(ctx, "999")
 	assert.ErrorIs(t, ErrNotFound, err)
 	NOW := timestamppb.Now()
 	expcode := &apiv1.AuthorizationCode{
@@ -117,8 +117,8 @@ func testdb(t *testing.T, db databaseInterface) {
 }
 
 type databaseInterface interface {
-	GetUserByID(ctx context.Context, id string) (*apiv1.UserProfile, error)
-	GetServieClientByID(ctx context.Context, id string) (*apiv1.ServiceClient, error)
+	GetUserById(ctx context.Context, id string) (*apiv1.UserProfile, error)
+	GetServieClientById(ctx context.Context, id string) (*apiv1.ServiceClient, error)
 	GetAuthorizationCodeByCode(ctx context.Context, code string) (*apiv1.AuthorizationCode, error)
 	CreateAuthorizationCode(ctx context.Context, row *apiv1.AuthorizationCode) error
 	GetAccessTokenByToken(ctx context.Context, token string) (*apiv1.AccessToken, error)
