@@ -7,5 +7,8 @@ run:
 drun:
 	go run cmd/server/database/main.go
 
+arun: 
+	go run cmd/server/auth/main.go
+
 test:
 	go test -race ./...
