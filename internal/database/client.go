@@ -18,6 +18,7 @@ type (
 		URL string
 	}
 	Client struct {
+		client         apiv1connect.DatabaseServiceClient
 		guser          *connect.BidiStreamForClient[apiv1.GetUserRequest, apiv1.GetUserResponse]
 		gserviceClient *connect.BidiStreamForClient[apiv1.GetServiceClientRequest, apiv1.GetServiceClientResponse]
 		gcode          *connect.BidiStreamForClient[apiv1.GetAuthorizationCodeRequest, apiv1.GetAuthorizationCodeResponse]
@@ -45,6 +46,7 @@ func NewDatabaseClient(ctx context.Context, config ClientConfig) (*Client, error
 		config.URL,
 	)
 	var client Client
+	client.client = c
 	client.guser = c.GetUser(ctx)
 	client.gserviceClient = c.GetServiceClient(ctx)
 	client.gcode = c.GetAuthorizationCode(ctx)
@@ -158,4 +160,9 @@ func (c *Client) CreateRefreshToken(ctx context.Context, row *apiv1.RefreshToken
 		return err
 	}
 	return nil
+}
+
+func (c *Client) Ping(ctx context.Context) error {
+	_, err := c.client.Ping(ctx, &connect.Request[apiv1.PingRequest]{})
+	return err
 }

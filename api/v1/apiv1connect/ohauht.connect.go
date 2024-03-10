@@ -56,6 +56,8 @@ const (
 	// DatabaseServiceCreateRefreshTokenProcedure is the fully-qualified name of the DatabaseService's
 	// CreateRefreshToken RPC.
 	DatabaseServiceCreateRefreshTokenProcedure = "/api.v1.DatabaseService/CreateRefreshToken"
+	// DatabaseServicePingProcedure is the fully-qualified name of the DatabaseService's Ping RPC.
+	DatabaseServicePingProcedure = "/api.v1.DatabaseService/Ping"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -69,6 +71,7 @@ var (
 	databaseServiceCreateAccessTokenMethodDescriptor       = databaseServiceServiceDescriptor.Methods().ByName("CreateAccessToken")
 	databaseServiceGetRefreshTokenMethodDescriptor         = databaseServiceServiceDescriptor.Methods().ByName("GetRefreshToken")
 	databaseServiceCreateRefreshTokenMethodDescriptor      = databaseServiceServiceDescriptor.Methods().ByName("CreateRefreshToken")
+	databaseServicePingMethodDescriptor                    = databaseServiceServiceDescriptor.Methods().ByName("Ping")
 )
 
 // DatabaseServiceClient is a client for the api.v1.DatabaseService service.
@@ -81,6 +84,7 @@ type DatabaseServiceClient interface {
 	CreateAccessToken(context.Context) *connect.BidiStreamForClient[v1.CreateAccessTokenRequest, v1.CreateAccessTokenResponse]
 	GetRefreshToken(context.Context) *connect.BidiStreamForClient[v1.GetRefreshTokenRequest, v1.GetRefreshTokenResponse]
 	CreateRefreshToken(context.Context) *connect.BidiStreamForClient[v1.CreateRefreshTokenRequest, v1.CreateRefreshTokenResponse]
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 }
 
 // NewDatabaseServiceClient constructs a client for the api.v1.DatabaseService service. By default,
@@ -141,6 +145,12 @@ func NewDatabaseServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(databaseServiceCreateRefreshTokenMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		ping: connect.NewClient[v1.PingRequest, v1.PingResponse](
+			httpClient,
+			baseURL+DatabaseServicePingProcedure,
+			connect.WithSchema(databaseServicePingMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -154,6 +164,7 @@ type databaseServiceClient struct {
 	createAccessToken       *connect.Client[v1.CreateAccessTokenRequest, v1.CreateAccessTokenResponse]
 	getRefreshToken         *connect.Client[v1.GetRefreshTokenRequest, v1.GetRefreshTokenResponse]
 	createRefreshToken      *connect.Client[v1.CreateRefreshTokenRequest, v1.CreateRefreshTokenResponse]
+	ping                    *connect.Client[v1.PingRequest, v1.PingResponse]
 }
 
 // GetUser calls api.v1.DatabaseService.GetUser.
@@ -196,6 +207,11 @@ func (c *databaseServiceClient) CreateRefreshToken(ctx context.Context) *connect
 	return c.createRefreshToken.CallBidiStream(ctx)
 }
 
+// Ping calls api.v1.DatabaseService.Ping.
+func (c *databaseServiceClient) Ping(ctx context.Context, req *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return c.ping.CallUnary(ctx, req)
+}
+
 // DatabaseServiceHandler is an implementation of the api.v1.DatabaseService service.
 type DatabaseServiceHandler interface {
 	GetUser(context.Context, *connect.BidiStream[v1.GetUserRequest, v1.GetUserResponse]) error
@@ -206,6 +222,7 @@ type DatabaseServiceHandler interface {
 	CreateAccessToken(context.Context, *connect.BidiStream[v1.CreateAccessTokenRequest, v1.CreateAccessTokenResponse]) error
 	GetRefreshToken(context.Context, *connect.BidiStream[v1.GetRefreshTokenRequest, v1.GetRefreshTokenResponse]) error
 	CreateRefreshToken(context.Context, *connect.BidiStream[v1.CreateRefreshTokenRequest, v1.CreateRefreshTokenResponse]) error
+	Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error)
 }
 
 // NewDatabaseServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -262,6 +279,12 @@ func NewDatabaseServiceHandler(svc DatabaseServiceHandler, opts ...connect.Handl
 		connect.WithSchema(databaseServiceCreateRefreshTokenMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	databaseServicePingHandler := connect.NewUnaryHandler(
+		DatabaseServicePingProcedure,
+		svc.Ping,
+		connect.WithSchema(databaseServicePingMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/api.v1.DatabaseService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DatabaseServiceGetUserProcedure:
@@ -280,6 +303,8 @@ func NewDatabaseServiceHandler(svc DatabaseServiceHandler, opts ...connect.Handl
 			databaseServiceGetRefreshTokenHandler.ServeHTTP(w, r)
 		case DatabaseServiceCreateRefreshTokenProcedure:
 			databaseServiceCreateRefreshTokenHandler.ServeHTTP(w, r)
+		case DatabaseServicePingProcedure:
+			databaseServicePingHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -319,4 +344,8 @@ func (UnimplementedDatabaseServiceHandler) GetRefreshToken(context.Context, *con
 
 func (UnimplementedDatabaseServiceHandler) CreateRefreshToken(context.Context, *connect.BidiStream[v1.CreateRefreshTokenRequest, v1.CreateRefreshTokenResponse]) error {
 	return connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.DatabaseService.CreateRefreshToken is not implemented"))
+}
+
+func (UnimplementedDatabaseServiceHandler) Ping(context.Context, *connect.Request[v1.PingRequest]) (*connect.Response[v1.PingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("api.v1.DatabaseService.Ping is not implemented"))
 }

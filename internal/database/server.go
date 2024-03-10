@@ -22,7 +22,7 @@ type (
 	}
 	handler struct {
 		*Database
-		apiv1connect.UnimplementedDatabaseServiceHandler
+		// apiv1connect.UnimplementedDatabaseServiceHandler
 	}
 )
 
@@ -226,4 +226,9 @@ func (h *handler) GetUser(ctx context.Context, stream *connect.BidiStream[apiv1.
 		}
 		continue
 	}
+}
+
+// Ping implements apiv1connect.DatabaseServiceHandler.
+func (h *handler) Ping(context.Context, *connect.Request[apiv1.PingRequest]) (*connect.Response[apiv1.PingResponse], error) {
+	return &connect.Response[apiv1.PingResponse]{}, nil
 }

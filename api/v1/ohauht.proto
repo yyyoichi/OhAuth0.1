@@ -13,6 +13,7 @@ service DatabaseService {
     rpc CreateAccessToken(stream CreateAccessTokenRequest) returns (stream CreateAccessTokenResponse);
     rpc GetRefreshToken(stream GetRefreshTokenRequest) returns (stream GetRefreshTokenResponse);
     rpc CreateRefreshToken(stream CreateRefreshTokenRequest) returns (stream CreateRefreshTokenResponse);
+    rpc Ping(PingRequest) returns (PingResponse);
 }
 
 message GetUserRequest {
@@ -93,3 +94,6 @@ message RefreshToken {
     google.protobuf.Timestamp expires = 4;
     string scope = 5;
 }
+
+message PingRequest {}
+message PingResponse{}
