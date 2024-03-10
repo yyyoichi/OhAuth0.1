@@ -6,7 +6,7 @@
 	},
 	"workspaceFolder": "/workspaces",
 	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces,type=bind,consistency=cached",
-	// "postCreateCommand": "sh /workspaces/.devcontainer/init-devcontainer.sh",
+	"postCreateCommand": "sh /workspaces/.devcontainer/init-devcontainer.sh",
 	"customizations": {
 		"vscode": {
 			"extensions": [
