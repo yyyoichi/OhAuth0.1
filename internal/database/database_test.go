@@ -56,9 +56,13 @@ func testdb(t *testing.T, db databaseInterface) {
 	user, err := db.GetUserByID(ctx, "1")
 	assert.NoError(t, err)
 	assert.NotZero(t, user)
+	_, err = db.GetUserByID(ctx, "999")
+	assert.ErrorIs(t, ErrNotFound, err)
 	client, err := db.GetServieClientByID(ctx, "500")
 	assert.NoError(t, err)
 	assert.NotZero(t, client)
+	_, err = db.GetServieClientByID(ctx, "999")
+	assert.ErrorIs(t, ErrNotFound, err)
 	NOW := timestamppb.Now()
 	expcode := &apiv1.AuthorizationCode{
 		Code:            "code",
@@ -72,6 +76,11 @@ func testdb(t *testing.T, db databaseInterface) {
 	code, err := db.GetAuthorizationCodeByCode(ctx, expcode.Code)
 	assert.NoError(t, err)
 	assert.EqualExportedValues(t, expcode, code)
+	err = db.CreateAuthorizationCode(ctx, expcode)
+	assert.ErrorIs(t, ErrAlreadyExists, err)
+	_, err = db.GetAuthorizationCodeByCode(ctx, "notfound")
+	assert.ErrorIs(t, ErrNotFound, err)
+
 	exptoken := &apiv1.AccessToken{
 		Token:           "token",
 		UserId:          "11",
@@ -84,6 +93,11 @@ func testdb(t *testing.T, db databaseInterface) {
 	token, err := db.GetAccessTokenByToken(ctx, exptoken.Token)
 	assert.NoError(t, err)
 	assert.EqualExportedValues(t, exptoken, token)
+	err = db.CreateAccessToken(ctx, exptoken)
+	assert.ErrorIs(t, ErrAlreadyExists, err)
+	_, err = db.GetAccessTokenByToken(ctx, "notfound")
+	assert.ErrorIs(t, ErrNotFound, err)
+
 	exprefresh := &apiv1.RefreshToken{
 		Token:           "token",
 		UserId:          "11",
@@ -96,6 +110,10 @@ func testdb(t *testing.T, db databaseInterface) {
 	refresh, err := db.GetRefreshTokenByToken(ctx, exprefresh.Token)
 	assert.NoError(t, err)
 	assert.EqualExportedValues(t, exprefresh, refresh)
+	err = db.CreateRefreshToken(ctx, exprefresh)
+	assert.ErrorIs(t, ErrAlreadyExists, err)
+	_, err = db.GetRefreshTokenByToken(ctx, "notfound")
+	assert.ErrorIs(t, ErrNotFound, err)
 }
 
 type databaseInterface interface {

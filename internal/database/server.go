@@ -66,7 +66,7 @@ func (h *handler) CreateAccessToken(ctx context.Context, stream *connect.BidiStr
 			return err
 		}
 		if err := h.Database.CreateAccessToken(ctx, msg.GetToken()); err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.CreateAccessTokenResponse{}); err != nil {
 			return err
@@ -85,7 +85,7 @@ func (h *handler) CreateAuthorizationCode(ctx context.Context, stream *connect.B
 			return err
 		}
 		if err := h.Database.CreateAuthorizationCode(ctx, msg.GetCode()); err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.CreateAuthorizationCodeResponse{}); err != nil {
 			return err
@@ -104,7 +104,7 @@ func (h *handler) CreateRefreshToken(ctx context.Context, stream *connect.BidiSt
 			return err
 		}
 		if err := h.Database.CreateRefreshToken(ctx, msg.GetToken()); err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.CreateRefreshTokenResponse{}); err != nil {
 			return err
@@ -125,7 +125,7 @@ func (h *handler) GetAccessToken(ctx context.Context, stream *connect.BidiStream
 		}
 		token, err := h.Database.GetAccessTokenByToken(ctx, msg.GetToken())
 		if err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.GetAccessTokenResponse{
 			Token: token,
@@ -148,7 +148,7 @@ func (h *handler) GetAuthorizationCode(ctx context.Context, stream *connect.Bidi
 		}
 		code, err := h.Database.GetAuthorizationCodeByCode(ctx, msg.GetCode())
 		if err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.GetAuthorizationCodeResponse{
 			Code: code,
@@ -171,7 +171,7 @@ func (h *handler) GetRefreshToken(ctx context.Context, stream *connect.BidiStrea
 		}
 		token, err := h.Database.GetRefreshTokenByToken(ctx, msg.GetToken())
 		if err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.GetRefreshTokenResponse{
 			Token: token,
@@ -194,7 +194,7 @@ func (h *handler) GetServiceClient(ctx context.Context, stream *connect.BidiStre
 		}
 		client, err := h.Database.GetServieClientByID(ctx, msg.GetId())
 		if err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.GetServiceClientResponse{
 			Client: client,
@@ -217,7 +217,7 @@ func (h *handler) GetUser(ctx context.Context, stream *connect.BidiStream[apiv1.
 		}
 		user, err := h.Database.GetUserByID(ctx, msg.GetId())
 		if err != nil {
-			return err
+			return h.newConnectError(err)
 		}
 		if err := stream.Send(&apiv1.GetUserResponse{
 			User: user,
@@ -231,4 +231,14 @@ func (h *handler) GetUser(ctx context.Context, stream *connect.BidiStream[apiv1.
 // Ping implements apiv1connect.DatabaseServiceHandler.
 func (h *handler) Ping(context.Context, *connect.Request[apiv1.PingRequest]) (*connect.Response[apiv1.PingResponse], error) {
 	return &connect.Response[apiv1.PingResponse]{}, nil
+}
+
+func (c *handler) newConnectError(err error) error {
+	if errors.Is(ErrNotFound, err) {
+		return connect.NewError(connect.CodeNotFound, err)
+	}
+	if errors.Is(ErrAlreadyExists, err) {
+		return connect.NewError(connect.CodeAlreadyExists, err)
+	}
+	return connect.NewError(connect.CodeInternal, err)
 }

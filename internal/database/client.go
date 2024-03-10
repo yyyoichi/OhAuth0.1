@@ -66,6 +66,7 @@ func (c *Client) GetUserByID(ctx context.Context, id string) (*apiv1.UserProfile
 	}
 	resp, err := c.guser.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return nil, err
 	}
 	return resp.GetUser(), nil
@@ -79,6 +80,7 @@ func (c *Client) GetServieClientByID(ctx context.Context, id string) (*apiv1.Ser
 	}
 	resp, err := c.gserviceClient.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return nil, err
 	}
 	return resp.GetClient(), nil
@@ -92,6 +94,7 @@ func (c *Client) GetAuthorizationCodeByCode(ctx context.Context, code string) (*
 	}
 	resp, err := c.gcode.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return nil, err
 	}
 	return resp.GetCode(), nil
@@ -105,6 +108,7 @@ func (c *Client) CreateAuthorizationCode(ctx context.Context, row *apiv1.Authori
 	}
 	_, err := c.ccode.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return err
 	}
 	return nil
@@ -118,6 +122,7 @@ func (c *Client) GetAccessTokenByToken(ctx context.Context, token string) (*apiv
 	}
 	resp, err := c.gtoken.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return nil, err
 	}
 	return resp.GetToken(), nil
@@ -131,6 +136,7 @@ func (c *Client) CreateAccessToken(ctx context.Context, row *apiv1.AccessToken) 
 	}
 	_, err := c.ctoken.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return err
 	}
 	return nil
@@ -144,6 +150,7 @@ func (c *Client) GetRefreshTokenByToken(ctx context.Context, token string) (*api
 	}
 	resp, err := c.grefresh.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return nil, err
 	}
 	return resp.GetToken(), nil
@@ -157,6 +164,7 @@ func (c *Client) CreateRefreshToken(ctx context.Context, row *apiv1.RefreshToken
 	}
 	_, err := c.crefresh.Receive()
 	if err != nil {
+		err := c.parseConnectError(err)
 		return err
 	}
 	return nil
@@ -164,5 +172,19 @@ func (c *Client) CreateRefreshToken(ctx context.Context, row *apiv1.RefreshToken
 
 func (c *Client) Ping(ctx context.Context) error {
 	_, err := c.client.Ping(ctx, &connect.Request[apiv1.PingRequest]{})
+	return err
+}
+
+func (c *Client) parseConnectError(err error) error {
+	connectErr, ok := err.(*connect.Error)
+	if !ok {
+		return err
+	}
+	switch connectErr.Code() {
+	case connect.CodeAlreadyExists:
+		return ErrAlreadyExists
+	case connect.CodeNotFound:
+		return ErrNotFound
+	}
 	return err
 }
