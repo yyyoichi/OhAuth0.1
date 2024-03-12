@@ -1,8 +1,8 @@
 version: v1
 plugins:
   - plugin: go
-    out: gen
+    out: ./
     opt: paths=source_relative
   - plugin: connect-go
-    out: gen
+    out: ./
     opt: paths=source_relative
