@@ -11,8 +11,9 @@ import (
 )
 
 type options struct {
-	body  io.Reader
-	query *url.Values
+	body    io.Reader
+	query   *url.Values
+	headers map[string]string
 }
 type Option func(options *options) error
 
@@ -26,6 +27,16 @@ func WithBody(body io.Reader) Option {
 func WithQuery(query url.Values) Option {
 	return func(options *options) error {
 		options.query = &query
+		return nil
+	}
+}
+
+func WithHeader(key, val string) Option {
+	return func(options *options) error {
+		if options.headers == nil {
+			options.headers = map[string]string{}
+		}
+		options.headers[key] = val
 		return nil
 	}
 }
@@ -51,6 +62,9 @@ func Serve(t *testing.T, config Config, opts ...Option) (*http.Request, *httptes
 		path += "?" + options.query.Encode()
 	}
 	req := httptest.NewRequest(config.Method, path, body)
+	for k, v := range options.headers {
+		req.Header.Add(k, v)
+	}
 	w := httptest.NewRecorder()
 	config.Router.ServeHTTP(w, req)
 	return req, w
