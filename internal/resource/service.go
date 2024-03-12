@@ -7,6 +7,7 @@ import (
 	"time"
 
 	apiv1 "github.com/yyyoichi/OhAuth0.1/api/v1"
+	"github.com/yyyoichi/OhAuth0.1/internal/database"
 )
 
 type (
@@ -17,6 +18,9 @@ type (
 		GetUserById(ctx context.Context, id string) (*apiv1.UserProfile, error)
 		GetAccessTokenByToken(ctx context.Context, token string) (*apiv1.AccessToken, error)
 	}
+	Config struct {
+		DatabaseServerURL string
+	}
 )
 
 var (
@@ -24,6 +28,17 @@ var (
 	ErrAccessTokenExpired   = errors.New("access token is expired")
 )
 
+func NewService(ctx context.Context, config Config) (*Service, error) {
+	client, err := database.NewDatabaseClient(ctx, database.ClientConfig{
+		URL: config.DatabaseServerURL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Service{
+		client: client,
+	}, nil
+}
 func (s *Service) VerifyAccessToken(ctx context.Context, accesstoken string) (*apiv1.AccessToken, error) {
 	token, err := s.client.GetAccessTokenByToken(ctx, accesstoken)
 	if err != nil {
