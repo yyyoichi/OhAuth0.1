@@ -1,20 +1,30 @@
 {
-	"name": "OhAuth0.1",
-	"image": "mcr.microsoft.com/devcontainers/base:focal",
-	"features": {
-		"ghcr.io/devcontainers/features/go:1": {}
-	},
-	"workspaceFolder": "/workspaces",
-	"workspaceMount": "source=${localWorkspaceFolder},target=/workspaces,type=bind,consistency=cached",
-	"postCreateCommand": "sh /workspaces/.devcontainer/init-devcontainer.sh",
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"donjayamanne.githistory",
-				"eamodio.gitlens",
-				"DavidAnson.vscode-markdownlint",
-				"zxh404.vscode-proto3"
-			]
-		}
-	}
+  "name": "OhAuth0.1",
+  "image": "mcr.microsoft.com/devcontainers/base:focal",
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {},
+    "ghcr.io/devcontainers/features/node": {},
+    "ghcr.io/devcontainers/features/docker-in-docker": {}
+  },
+  "workspaceFolder": "/workspaces",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces,type=bind,consistency=cached",
+  "mounts": [
+    {
+      "type": "volume",
+      "source": "OhAuth0.1-node_modules",
+      "target": "/workspaces/web/node_modules"
+    }
+  ],
+  "postCreateCommand": "sh /workspaces/.devcontainer/init-devcontainer.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "donjayamanne.githistory",
+        "eamodio.gitlens",
+        "DavidAnson.vscode-markdownlint",
+        "zxh404.vscode-proto3",
+        "biomejs.biome"
+      ]
+    }
+  }
 }
