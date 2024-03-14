@@ -10,5 +10,8 @@ drun:
 arun: 
 	go run cmd/server/auth/main.go
 
+srun: 
+	go run cmd/server/auth/main.go
+
 test:
 	go test -race ./...
