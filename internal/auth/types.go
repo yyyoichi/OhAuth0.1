@@ -5,9 +5,10 @@ type (
 		ClientId string `uri:"client_id" binding:"required"`
 	}
 	ServiceClientGetResponse struct {
-		ClientId string `json:"client_id"`
-		Name     string `json:"name"`
-		Scope    string `json:"scope"`
+		ClientId    string `json:"client_id"`
+		Name        string `json:"name"`
+		Scope       string `json:"scope"`
+		RedirectUri string `json:"redirect_uri"`
 	}
 )
 

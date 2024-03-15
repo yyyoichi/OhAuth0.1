@@ -43,6 +43,7 @@ func SetupRouter(service *Service) *gin.Engine {
 		resp.ClientId = client.GetId()
 		resp.Name = client.GetName()
 		resp.Scope = client.GetScope()
+		resp.RedirectUri = client.GetRedirectUri()
 		ctx.SecureJSON(http.StatusOK, resp)
 	})
 
