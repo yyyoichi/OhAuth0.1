@@ -1,5 +1,4 @@
 import { DotIcon } from "./icons";
-import type { MyColorPallet } from "./types";
 
 export type MyUlProps = React.ComponentProps<"ul">;
 

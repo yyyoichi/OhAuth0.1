@@ -10,7 +10,7 @@ import {
 	MyInputCaution,
 	MyInput,
 } from "./input";
-import type { Essential, NonNullablePick } from "./types";
+import type { Essential } from "./types";
 
 export const Forms = {
 	// wrap contents

@@ -12,7 +12,7 @@ import {
 import { useState } from "react";
 import { FadeAnim } from "@/app/components/animation";
 import { useAuthenticationState } from "../lib/useAuthenticationState";
-import { external, type Config } from "../lib/external";
+import { external } from "../lib/external";
 
 export type V1AuthPageProps = {
 	serviceClient: ServiceClient;
