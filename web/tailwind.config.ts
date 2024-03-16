@@ -17,6 +17,7 @@ const config: Config = {
 				"my-black": "var(--my-black)",
 				"my-light-black": "var(--my-light-black)",
 				"my-white": "var(--my-white)",
+				"my-heavy-white": "var(--my-heavy-white)",
 				"my-red": "var(--my-red)",
 				"my-green": "var(--my-green)",
 				"my-yellow": "var(--my-yellow)",
@@ -39,6 +40,9 @@ const config: Config = {
 						transform: "translateY(5px)",
 						height: "0",
 					},
+					"90%": {
+						transform: "translateY(1px)",
+					},
 					"100%": {
 						opacity: "1",
 						transform: "translateY(0)",
@@ -48,12 +52,10 @@ const config: Config = {
 				fadeout: {
 					"0%": {
 						opacity: "1",
-						transform: "translateY(-2px)",
 						height: "inherit",
 					},
 					"100%": {
 						opacity: "0",
-						transform: "translateY(0)",
 						height: "0",
 					},
 				},

@@ -30,10 +30,5 @@ export default async function Page({
 			redirectUri: serviceClient.redirectUri,
 		},
 	};
-	return (
-		<div>
-			<h1>Hello world</h1>
-			<V1AuthPage {...pageProps} />
-		</div>
-	);
+	return <V1AuthPage {...pageProps} />;
 }

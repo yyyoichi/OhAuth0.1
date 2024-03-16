@@ -6,6 +6,7 @@
   --my-black: #1e2028;
   --my-light-black: #514e4e;
   --my-white: #e5e7eb;
+  --my-heavy-white: #d3d3d3;
   --my-yellow: #d3c560;
   --my-green: #97c218;
   --my-red: #db4027;
@@ -14,6 +15,7 @@
   --myc-black: #1e2028;
   --myc-light-black: #514e4e;
   --myc-white: #e5e7eb;
+  --my-heavy-white: #d3d3d3;
   --myc-yellow: #d3c560;
   --myc-green: #97c218;
   --myc-red: #db4027;
@@ -25,6 +27,7 @@
     --my-black: #e5e7eb;
     --my-white: #1e2028;
     --my-light-black: #abaeb4;
+    --my-heavy-white: #514e4e;
     --my-yellow: #e4b45e;
     --my-green: #8dbc01;
     --my-red: #f14226;
