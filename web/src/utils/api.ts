@@ -24,11 +24,17 @@ export class ServiceClient {
 			client_id: string;
 			name: string;
 			scope: string;
+			redirect_uri: string;
 		}>(resp);
 		if (body instanceof Error) {
 			return body;
 		}
-		return new ServiceClient(body.client_id, body.name, body.scope);
+		return new ServiceClient(
+			body.client_id,
+			body.name,
+			body.scope,
+			body.redirect_uri,
+		);
 	};
 	static mget = (config?: ApiMockConfig): GetServiceClient => {
 		const c = defaultConfig(config);
@@ -39,7 +45,14 @@ export class ServiceClient {
 					if (Err !== null) {
 						resolve(new Err(param.clientId));
 					}
-					resolve(new ServiceClient(param.clientId, "name", "profile:view"));
+					resolve(
+						new ServiceClient(
+							param.clientId,
+							"name",
+							"profile:view",
+							"http://localhost:3000",
+						),
+					);
 				}, c.ms);
 			});
 		};
@@ -48,6 +61,7 @@ export class ServiceClient {
 		readonly clientId: string = "",
 		readonly name: string = "",
 		readonly scope: string = "",
+		readonly redirectUri: string = "",
 	) {}
 }
 

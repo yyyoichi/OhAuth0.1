@@ -1,11 +1,13 @@
 "use client";
-import { useAuthProps } from "./lib/useAuthProps";
+import dynamic from "next/dynamic";
+import { AuthExternal } from "./lib/external";
 
+const Client = dynamic(() => import("./components"), { ssr: false });
 export default function Home() {
-	useAuthProps();
 	return (
 		<div>
 			<h1>Hello world</h1>
+			<Client external={new AuthExternal()} />
 		</div>
 	);
 }
