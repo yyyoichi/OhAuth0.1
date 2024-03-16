@@ -23,7 +23,8 @@
         "eamodio.gitlens",
         "DavidAnson.vscode-markdownlint",
         "zxh404.vscode-proto3",
-        "biomejs.biome"
+        "biomejs.biome",
+        "bradlc.vscode-tailwindcss"
       ]
     }
   }
