@@ -1,13 +1,39 @@
-"use client";
-import dynamic from "next/dynamic";
+import { V1AuthPage, type V1AuthPageProps } from "./components";
 import { AuthExternal } from "./lib/external";
 
-const Client = dynamic(() => import("./components"), { ssr: false });
-export default function Home() {
+export default async function Page({
+	searchParams,
+}: {
+	searchParams: { [key: string]: string | string[] | undefined };
+}) {
+	const external = new AuthExternal();
+	let clientId: string;
+	switch (typeof searchParams.client_id) {
+		case "string":
+			clientId = searchParams.client_id;
+			break;
+		case "undefined":
+			clientId = "501";
+			break;
+		case "object":
+			clientId = searchParams.client_id[0];
+	}
+	const serviceClient = await external.getServiceClient({ clientId });
+	if (serviceClient instanceof Error) {
+		return <div>Error: {serviceClient.message}</div>;
+	}
+	const pageProps: V1AuthPageProps = {
+		serviceClient: {
+			clientId: serviceClient.clientId,
+			name: serviceClient.name,
+			scope: serviceClient.scope,
+			redirectUri: serviceClient.redirectUri,
+		},
+	};
 	return (
 		<div>
 			<h1>Hello world</h1>
-			<Client external={new AuthExternal()} />
+			<V1AuthPage {...pageProps} />
 		</div>
 	);
 }

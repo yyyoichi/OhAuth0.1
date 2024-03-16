@@ -1,19 +1,20 @@
-import type { AuthExternal } from "../lib/external";
-import { useClientState } from "../lib/useClientState";
+"use client";
+import type { ServiceClient } from "@/utils/api";
+import { ServiceClientProps } from "../lib/serviceClientProps";
 
-export type PageProps = {
-	external: AuthExternal;
+export type V1AuthPageProps = {
+	serviceClient: ServiceClient;
 };
-export default function Page(props: PageProps) {
-	const client = useClientState(props.external);
+export function V1AuthPage({ serviceClient }: V1AuthPageProps) {
+	const props = new ServiceClientProps(serviceClient);
 	return (
 		<div className="flex">
-			<div>{client.client ? client.client?.name : "loading"}</div>
+			<div>{props.name()}</div>
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
 			<div
 				onClick={(e) => {
 					console.log(e);
-					client.redirect("hoge");
+					props.redirect("code");
 				}}
 			>
 				send
