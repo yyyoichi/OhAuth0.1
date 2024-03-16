@@ -1,3 +1,4 @@
+import { MODE } from "@/utils/config";
 import { V1AuthPage, type V1AuthPageProps } from "./components";
 import { AuthExternal } from "./lib/external";
 

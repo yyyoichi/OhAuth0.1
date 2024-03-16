@@ -7,4 +7,7 @@ export class ServiceClientProps {
 		window.location.assign(url);
 	}
 	name = () => this.sc.name;
+	clientId = () => this.sc.clientId;
+	redirectUri = () => this.sc.redirectUri;
+	scope = () => this.sc.scope;
 }

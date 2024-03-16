@@ -10,7 +10,7 @@ import {
 	MyInputCaution,
 	MyInput,
 } from "./input";
-import type { NonNullablePick } from "./types";
+import type { Essential, NonNullablePick } from "./types";
 
 export const Forms = {
 	// wrap contents
@@ -31,7 +31,7 @@ export const Forms = {
 
 export type TextInputFrameProps = {
 	label: Pick<MyInputLabelProps, "value">;
-	input: NonNullablePick<MyInputProps, "value" | "onChange" | "readOnly">;
+	input: Essential<MyInputProps, "value" | "onChange" | "readOnly">;
 	description: Pick<MyInputDescriptionProps, "value">;
 	coution: Pick<MyInputCautionProps, "value">;
 };
@@ -90,7 +90,7 @@ export const PasswordFrame = (props: PasswordFrameProps) => {
 };
 
 type PasswordFieldProps = {
-	input: NonNullablePick<MyInputProps, "value" | "onChange" | "readOnly"> & {
+	input: Essential<MyInputProps, "value" | "onChange" | "readOnly"> & {
 		visible?: boolean;
 	};
 };
