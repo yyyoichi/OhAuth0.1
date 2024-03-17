@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -38,7 +39,11 @@ func main() {
 	if port = os.Getenv("AUTHORIZATION_SERVER_PORT"); port == "" {
 		panic("no required env found")
 	}
-	router := auth.SetupRouter(service)
+	var uiport string
+	if uiport = os.Getenv("UI_SERVER_PORT"); uiport == "" {
+		panic("no required env found")
+	}
+	router := auth.SetupRouter(service, fmt.Sprintf("http://localhost:%s", uiport))
 	if err := router.Run(":" + port); err != nil {
 		log.Fatal(err)
 	}

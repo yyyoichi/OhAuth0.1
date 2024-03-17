@@ -3,10 +3,12 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	apiv1 "github.com/yyyoichi/OhAuth0.1/api/v1"
@@ -16,8 +18,30 @@ import (
 
 var JWT_SECRET = []byte("JWT_SECRET")
 
-func SetupRouter(service *Service) *gin.Engine {
+func SetupRouter(service *Service, allowOrigins ...string) *gin.Engine {
 	router := gin.Default()
+	log.Printf("allow origins: %v", allowOrigins)
+	// cross origin
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: allowOrigins,
+		AllowMethods: []string{
+			http.MethodPost,
+			http.MethodGet,
+			http.MethodOptions,
+		},
+		AllowHeaders: []string{
+			"Access-Control-Allow-Credentials",
+			"Access-Control-Allow-Headers",
+			"Access-Control-Allow-Origin",
+			"Origin",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"Authorization",
+		},
+		AllowCredentials: false,
+	}))
+
 	api := router.Group("/api")
 	v1 := api.Group("/v1")
 
