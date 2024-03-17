@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -12,16 +13,17 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
+	l := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(l)
 	envPath := flag.String("source", "", "env file")
 	flag.Parse()
 	if envPath != nil {
 		if err := godotenv.Load(*envPath); err != nil {
 			panic(err)
 		}
-		log.Printf("read env file '%s'", *envPath)
+		slog.Info("read env file", slog.String("path", *envPath))
 	}
-
-	ctx := context.Background()
 
 	var dbport string
 	if dbport = os.Getenv("DATABASE_SERVER_PORT"); dbport == "" {

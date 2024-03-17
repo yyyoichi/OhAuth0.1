@@ -3,7 +3,6 @@ package auth
 import (
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"time"
@@ -20,7 +19,6 @@ var JWT_SECRET = []byte("JWT_SECRET")
 
 func SetupRouter(service *Service, allowOrigins ...string) *gin.Engine {
 	router := gin.Default()
-	log.Printf("allow origins: %v", allowOrigins)
 	// cross origin
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: allowOrigins,
