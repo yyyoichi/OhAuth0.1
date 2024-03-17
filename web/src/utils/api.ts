@@ -1,4 +1,8 @@
-const HOST = "http://localhost:8088";
+const PORT = process.env.NEXT_PUBLIC_AUTHORIZATION_SERVER_PORT;
+if (!PORT) {
+	console.error("no port");
+}
+const HOST = `http://localhost:${PORT}`;
 
 export type GetServiceClient = (param: {
 	clientId: string;
@@ -171,6 +175,7 @@ export class NotFoundError extends Error {}
 export class InternalServerError extends Error {}
 const json = async <T>(resp: Response) => {
 	const body = await resp.json();
+	console.log(body);
 	const Err = error(resp.status);
 	if (Err !== null) {
 		return new Err(body.status);
