@@ -82,11 +82,7 @@ func SetupRouter(service *Service, allowOrigins ...string) *gin.Engine {
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot authenticate: %v", err))
 			if errors.Is(err, database.ErrNotFound) || errors.Is(err, ErrNoMatchPassword) {
-				ctx.SecureJSON(http.StatusBadRequest, enging.BadRequestMessage)
-				return
-			}
-			if errors.Is(err, database.ErrNotFound) {
-				ctx.SecureJSON(http.StatusNotFound, enging.NotFoundMessage)
+				ctx.SecureJSON(http.StatusBadRequest, gin.H{"status": "Invalid Id or Password"})
 				return
 			}
 			ctx.SecureJSON(http.StatusInternalServerError, enging.InternalServerErrorMessage)
