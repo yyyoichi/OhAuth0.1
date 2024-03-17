@@ -75,7 +75,7 @@ export class Authentication {
 		const resp = await fetch(url, {
 			method: "POST",
 			body: JSON.stringify({
-				cilent_id: param.clientId,
+				client_id: param.clientId,
 				user_id: param.userId,
 				password: param.password,
 			}),
