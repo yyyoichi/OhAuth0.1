@@ -175,7 +175,6 @@ export class NotFoundError extends Error {}
 export class InternalServerError extends Error {}
 const json = async <T>(resp: Response) => {
 	const body = await resp.json();
-	console.log(body);
 	const Err = error(resp.status);
 	if (Err !== null) {
 		return new Err(body.status);
