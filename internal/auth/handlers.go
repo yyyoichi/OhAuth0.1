@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	apiv1 "github.com/yyyoichi/OhAuth0.1/api/v1"
@@ -16,8 +17,29 @@ import (
 
 var JWT_SECRET = []byte("JWT_SECRET")
 
-func SetupRouter(service *Service) *gin.Engine {
+func SetupRouter(service *Service, allowOrigins ...string) *gin.Engine {
 	router := gin.Default()
+	// cross origin
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: allowOrigins,
+		AllowMethods: []string{
+			http.MethodPost,
+			http.MethodGet,
+			http.MethodOptions,
+		},
+		AllowHeaders: []string{
+			"Access-Control-Allow-Credentials",
+			"Access-Control-Allow-Headers",
+			"Access-Control-Allow-Origin",
+			"Origin",
+			"Content-Type",
+			"Content-Length",
+			"Accept-Encoding",
+			"Authorization",
+		},
+		AllowCredentials: false,
+	}))
+
 	api := router.Group("/api")
 	v1 := api.Group("/v1")
 
@@ -58,11 +80,7 @@ func SetupRouter(service *Service) *gin.Engine {
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot authenticate: %v", err))
 			if errors.Is(err, database.ErrNotFound) || errors.Is(err, ErrNoMatchPassword) {
-				ctx.SecureJSON(http.StatusBadRequest, enging.BadRequestMessage)
-				return
-			}
-			if errors.Is(err, database.ErrNotFound) {
-				ctx.SecureJSON(http.StatusNotFound, enging.NotFoundMessage)
+				ctx.SecureJSON(http.StatusBadRequest, gin.H{"status": "Invalid Id or Password"})
 				return
 			}
 			ctx.SecureJSON(http.StatusInternalServerError, enging.InternalServerErrorMessage)

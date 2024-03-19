@@ -1,4 +1,8 @@
-const HOST = "http://localhost:8088";
+const PORT = process.env.NEXT_PUBLIC_AUTHORIZATION_SERVER_PORT;
+if (!PORT) {
+	console.error("no port");
+}
+const HOST = `http://localhost:${PORT}`;
 
 export type GetServiceClient = (param: {
 	clientId: string;
@@ -71,7 +75,7 @@ export class Authentication {
 		const resp = await fetch(url, {
 			method: "POST",
 			body: JSON.stringify({
-				cilent_id: param.clientId,
+				client_id: param.clientId,
 				user_id: param.userId,
 				password: param.password,
 			}),

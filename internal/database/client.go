@@ -18,15 +18,7 @@ type (
 		URL string
 	}
 	Client struct {
-		client         apiv1connect.DatabaseServiceClient
-		guser          *connect.BidiStreamForClient[apiv1.GetUserRequest, apiv1.GetUserResponse]
-		gserviceClient *connect.BidiStreamForClient[apiv1.GetServiceClientRequest, apiv1.GetServiceClientResponse]
-		gcode          *connect.BidiStreamForClient[apiv1.GetAuthorizationCodeRequest, apiv1.GetAuthorizationCodeResponse]
-		gtoken         *connect.BidiStreamForClient[apiv1.GetAccessTokenRequest, apiv1.GetAccessTokenResponse]
-		grefresh       *connect.BidiStreamForClient[apiv1.GetRefreshTokenRequest, apiv1.GetRefreshTokenResponse]
-		ccode          *connect.BidiStreamForClient[apiv1.CreateAuthorizationCodeRequest, apiv1.CreateAuthorizationCodeResponse]
-		ctoken         *connect.BidiStreamForClient[apiv1.CreateAccessTokenRequest, apiv1.CreateAccessTokenResponse]
-		crefresh       *connect.BidiStreamForClient[apiv1.CreateRefreshTokenRequest, apiv1.CreateRefreshTokenResponse]
+		client apiv1connect.DatabaseServiceClient
 	}
 )
 
@@ -41,30 +33,22 @@ func NewDatabaseClient(ctx context.Context, config ClientConfig) (*Client, error
 			PingTimeout:     time.Duration(15) * time.Second, //15sのpingに対する応答を待機
 		},
 	}
-	c := apiv1connect.NewDatabaseServiceClient(
+	var client Client
+	client.client = apiv1connect.NewDatabaseServiceClient(
 		httpClient,
 		config.URL,
 	)
-	var client Client
-	client.client = c
-	client.guser = c.GetUser(ctx)
-	client.gserviceClient = c.GetServiceClient(ctx)
-	client.gcode = c.GetAuthorizationCode(ctx)
-	client.ccode = c.CreateAuthorizationCode(ctx)
-	client.gtoken = c.GetAccessToken(ctx)
-	client.ctoken = c.CreateAccessToken(ctx)
-	client.grefresh = c.GetRefreshToken(ctx)
-	client.crefresh = c.CreateRefreshToken(ctx)
 	return &client, nil
 }
 
 func (c *Client) GetUserById(ctx context.Context, id string) (*apiv1.UserProfile, error) {
-	if err := c.guser.Send(&apiv1.GetUserRequest{
+	cc := c.client.GetUser(ctx)
+	if err := cc.Send(&apiv1.GetUserRequest{
 		Id: id,
 	}); err != nil {
 		return nil, err
 	}
-	resp, err := c.guser.Receive()
+	resp, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return nil, err
@@ -73,12 +57,13 @@ func (c *Client) GetUserById(ctx context.Context, id string) (*apiv1.UserProfile
 }
 
 func (c *Client) GetServieClientById(ctx context.Context, id string) (*apiv1.ServiceClient, error) {
-	if err := c.gserviceClient.Send(&apiv1.GetServiceClientRequest{
+	cc := c.client.GetServiceClient(ctx)
+	if err := cc.Send(&apiv1.GetServiceClientRequest{
 		Id: id,
 	}); err != nil {
 		return nil, err
 	}
-	resp, err := c.gserviceClient.Receive()
+	resp, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return nil, err
@@ -87,12 +72,13 @@ func (c *Client) GetServieClientById(ctx context.Context, id string) (*apiv1.Ser
 }
 
 func (c *Client) GetAuthorizationCodeByCode(ctx context.Context, code string) (*apiv1.AuthorizationCode, error) {
-	if err := c.gcode.Send(&apiv1.GetAuthorizationCodeRequest{
+	cc := c.client.GetAuthorizationCode(ctx)
+	if err := cc.Send(&apiv1.GetAuthorizationCodeRequest{
 		Code: code,
 	}); err != nil {
 		return nil, err
 	}
-	resp, err := c.gcode.Receive()
+	resp, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return nil, err
@@ -101,12 +87,13 @@ func (c *Client) GetAuthorizationCodeByCode(ctx context.Context, code string) (*
 }
 
 func (c *Client) CreateAuthorizationCode(ctx context.Context, row *apiv1.AuthorizationCode) error {
-	if err := c.ccode.Send(&apiv1.CreateAuthorizationCodeRequest{
+	cc := c.client.CreateAuthorizationCode(ctx)
+	if err := cc.Send(&apiv1.CreateAuthorizationCodeRequest{
 		Code: row,
 	}); err != nil {
 		return err
 	}
-	_, err := c.ccode.Receive()
+	_, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return err
@@ -115,12 +102,13 @@ func (c *Client) CreateAuthorizationCode(ctx context.Context, row *apiv1.Authori
 }
 
 func (c *Client) GetAccessTokenByToken(ctx context.Context, token string) (*apiv1.AccessToken, error) {
-	if err := c.gtoken.Send(&apiv1.GetAccessTokenRequest{
+	cc := c.client.GetAccessToken(ctx)
+	if err := cc.Send(&apiv1.GetAccessTokenRequest{
 		Token: token,
 	}); err != nil {
 		return nil, err
 	}
-	resp, err := c.gtoken.Receive()
+	resp, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return nil, err
@@ -129,12 +117,13 @@ func (c *Client) GetAccessTokenByToken(ctx context.Context, token string) (*apiv
 }
 
 func (c *Client) CreateAccessToken(ctx context.Context, row *apiv1.AccessToken) error {
-	if err := c.ctoken.Send(&apiv1.CreateAccessTokenRequest{
+	cc := c.client.CreateAccessToken(ctx)
+	if err := cc.Send(&apiv1.CreateAccessTokenRequest{
 		Token: row,
 	}); err != nil {
 		return err
 	}
-	_, err := c.ctoken.Receive()
+	_, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return err
@@ -143,12 +132,13 @@ func (c *Client) CreateAccessToken(ctx context.Context, row *apiv1.AccessToken) 
 }
 
 func (c *Client) GetRefreshTokenByToken(ctx context.Context, token string) (*apiv1.RefreshToken, error) {
-	if err := c.grefresh.Send(&apiv1.GetRefreshTokenRequest{
+	cc := c.client.GetRefreshToken(ctx)
+	if err := cc.Send(&apiv1.GetRefreshTokenRequest{
 		Token: token,
 	}); err != nil {
 		return nil, err
 	}
-	resp, err := c.grefresh.Receive()
+	resp, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return nil, err
@@ -157,12 +147,13 @@ func (c *Client) GetRefreshTokenByToken(ctx context.Context, token string) (*api
 }
 
 func (c *Client) CreateRefreshToken(ctx context.Context, row *apiv1.RefreshToken) error {
-	if err := c.crefresh.Send(&apiv1.CreateRefreshTokenRequest{
+	cc := c.client.CreateRefreshToken(ctx)
+	if err := cc.Send(&apiv1.CreateRefreshTokenRequest{
 		Token: row,
 	}); err != nil {
 		return err
 	}
-	_, err := c.crefresh.Receive()
+	_, err := cc.Receive()
 	if err != nil {
 		err := c.parseConnectError(err)
 		return err
