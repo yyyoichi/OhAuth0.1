@@ -12,22 +12,38 @@ import (
 	"github.com/yyyoichi/OhAuth0.1/internal/database"
 )
 
-type Brawser struct {
-	AuthUiServerURI string
+type (
+	Brawser struct {
+		codeReceiver      CodeReceiver
+		accessTokenClient AccessTokenClient
+		resourceClient    ResourceClient
 
-	codeReceiver      CodeReceiver
-	accessTokenClient AccessTokenClient
-	resourceClient    ResourceClient
+		mu                     sync.Mutex
+		currentServiceClientId *string
+		accessTokens           map[string]string
+		refreshTokens          map[string]string
+	}
+	BrawserConfig struct {
+		RedirectURI       string
+		AuthServerURI     string
+		ResourceServerURI string
+	}
+)
 
-	mu                     sync.Mutex
-	currentServiceClientId *string
-	accessTokens           map[string]string
-	refreshTokens          map[string]string
+func NewBrawser(config BrawserConfig) *Brawser {
+	var b Brawser
+	b.codeReceiver = NewCodeReceiver(config.RedirectURI)
+	b.accessTokenClient = NewAccessTokenClient(config.AuthServerURI)
+	b.resourceClient = NewResourceClient(config.ResourceServerURI)
+
+	b.mu = sync.Mutex{}
+	b.currentServiceClientId = nil
+	b.accessTokens = map[string]string{}
+	b.refreshTokens = map[string]string{}
+	return &b
 }
 
-func (b *Brawser) Brawse(input string) (*output, error) {
-	ctx := context.Background()
-	// set default slog values
+func (b *Brawser) Brawse(ctx context.Context, input string) (*output, error) {
 	command := ParseCommand(input)
 	switchedAnySite := b.currentServiceClientId == nil
 
