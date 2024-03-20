@@ -12,7 +12,10 @@ var (
 	InternalServerErrorMessage = gin.H{
 		"status": "Internal Server Error",
 	}
-	ForbiddenErrorMssage = gin.H{
+	ForbiddenErrorMessage = gin.H{
 		"status": "Forbidden",
+	}
+	StatusUnauthorizedErrorMessage = gin.H{
+		"status": "unauthorized",
 	}
 )
