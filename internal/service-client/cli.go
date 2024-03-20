@@ -23,10 +23,10 @@ type Brawser struct {
 	accessTokens           map[string]string
 }
 
-func (b *Brawser) Brawse(command Command) (*output, error) {
+func (b *Brawser) Brawse(input string) (*output, error) {
 	ctx := context.Background()
 	// set default slog values
-
+	command := ParseCommand(input)
 	switchedAnySite := b.currentServiceClientId == nil
 
 	switch command.command {
@@ -134,6 +134,7 @@ type (
 )
 
 const (
+	unknown     command = "unknown"
 	help        command = "help"
 	status      command = "status"
 	showSites   command = "show-sites"
@@ -142,7 +143,7 @@ const (
 	logout      command = "logout"
 	viewProfile command = "view-profile"
 
-	unknown messageId = iota
+	unknownMsgId messageId = iota
 	helpMsgId
 	statusMsgId
 	showsiteMsgId
@@ -152,26 +153,26 @@ const (
 	viewProfileMsgId
 )
 
-func Help() Command {
-	return Command{command: help}
-}
-func Status() Command {
-	return Command{command: status}
-}
-func ShowSites() Command {
-	return Command{command: showSites}
-}
-func SwitchSite(id string) Command {
-	return Command{command: switchsite, args: []string{id}}
-}
-func Login() Command {
-	return Command{command: login}
-}
-func Logout() Command {
-	return Command{command: logout}
-}
-func ViewProfile() Command {
-	return Command{command: viewProfile}
+func ParseCommand(input string) Command {
+	cmds := strings.Split(input, " ")
+	switch command(cmds[0]) {
+	case help:
+		return Command{command: help}
+	case status:
+		return Command{command: status}
+	case showSites:
+		return Command{command: showSites}
+	case switchsite:
+		return Command{command: switchsite, args: cmds[1:]}
+	case login:
+		return Command{command: login}
+	case logout:
+		return Command{command: logout}
+	case viewProfile:
+		return Command{command: viewProfile}
+	default:
+		return Command{command: unknown}
+	}
 }
 
 // Brawser outputs
