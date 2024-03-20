@@ -4,19 +4,25 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 
 	"github.com/yyyoichi/OhAuth0.1/internal/auth"
 )
 
-type CodeReceiver struct {
-	HostURI string
-	codeCh  chan string
-	closed  bool
-}
+type (
+	CodeReceiver struct {
+		HostURI string
+		codeCh  chan codeResult
+		closed  bool
+	}
+	codeResult struct {
+		code string
+		err  error
+	}
+)
 
 func NewCodeReceiver(uri string) CodeReceiver {
 	b := CodeReceiver{}
@@ -29,43 +35,45 @@ func (b *CodeReceiver) Start(ctx context.Context) {
 		panic("please Init()")
 	}
 	http.ListenAndServe(b.HostURI, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			b.closed = true
+			close(b.codeCh)
+		}()
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 		code := r.URL.Query().Get("code")
 		if code != "" {
-			slog.ErrorContext(ctx, "code is empty")
+			b.codeCh <- codeResult{
+				err: errors.New("code is empty"),
+			}
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		defer func() {
-			b.closed = true
-			close(b.codeCh)
-		}()
 		select {
 		case <-ctx.Done():
+			b.codeCh <- codeResult{
+				err: context.Cause(ctx),
+			}
+			w.WriteHeader(http.StatusRequestTimeout)
 			return
 		default:
-			b.codeCh <- code
+			b.codeCh <- codeResult{
+				code: code,
+			}
+			w.WriteHeader(http.StatusOK)
+			return
 		}
 	}))
 }
 
-func (b *CodeReceiver) Receive(cxt context.Context) string {
-	select {
-	case <-cxt.Done():
-		return ""
-	case code, ok := <-b.codeCh:
-		if !ok {
-			return ""
-		}
-		return code
-	}
+func (b *CodeReceiver) Receive() codeResult {
+	return <-b.codeCh
 }
 
 func (b *CodeReceiver) Init() {
-	b.codeCh = make(chan string)
+	b.codeCh = make(chan codeResult)
 	b.closed = false
 }
 
