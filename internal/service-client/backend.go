@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/yyyoichi/OhAuth0.1/internal/auth"
+	"github.com/yyyoichi/OhAuth0.1/internal/resource"
 )
 
 type (
@@ -79,7 +80,7 @@ func (b *CodeReceiver) Init() {
 
 type (
 	AccessTokenClient struct {
-		AuthServerURI string
+		post func(ctx context.Context, path string, body io.Reader) (resp *http.Response, err error)
 	}
 	AccessTokenRequestParam struct {
 		ClientId     string
@@ -87,7 +88,19 @@ type (
 	}
 )
 
-func (c *AccessTokenClient) GetByCode(code string, param AccessTokenRequestParam) (
+func NewAccessTokenClient(authServerURI string) AccessTokenClient {
+	return AccessTokenClient{
+		post: func(ctx context.Context, path string, body io.Reader) (*http.Response, error) {
+			req, err := http.NewRequestWithContext(ctx, http.MethodPost, authServerURI+path, body)
+			if err != nil {
+				return nil, err
+			}
+			return http.DefaultClient.Do(req)
+		},
+	}
+}
+
+func (c *AccessTokenClient) GetByCode(ctx context.Context, code string, param AccessTokenRequestParam) (
 	*auth.AccessTokenResponse, error,
 ) {
 	var req auth.AccessTokenRequest
@@ -95,10 +108,10 @@ func (c *AccessTokenClient) GetByCode(code string, param AccessTokenRequestParam
 	req.ClientId = param.ClientId
 	req.ClientSecret = param.ClientSecret
 	req.Code = code
-	return c.get(req)
+	return c.get(ctx, req)
 }
 
-func (c *AccessTokenClient) GetByRefreshToken(token string, param AccessTokenRequestParam) (
+func (c *AccessTokenClient) GetByRefreshToken(ctx context.Context, token string, param AccessTokenRequestParam) (
 	*auth.AccessTokenResponse, error,
 ) {
 	var req auth.AccessTokenRequest
@@ -106,19 +119,15 @@ func (c *AccessTokenClient) GetByRefreshToken(token string, param AccessTokenReq
 	req.ClientId = param.ClientId
 	req.ClientSecret = param.ClientSecret
 	req.RefreshToken = token
-	return c.get(req)
+	return c.get(ctx, req)
 }
 
-func (c *AccessTokenClient) get(req auth.AccessTokenRequest) (*auth.AccessTokenResponse, error) {
+func (c *AccessTokenClient) get(ctx context.Context, req auth.AccessTokenRequest) (*auth.AccessTokenResponse, error) {
 	b, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Post(
-		c.AuthServerURI+"/api/v1/accesstoken",
-		"application/json",
-		bytes.NewReader(b),
-	)
+	resp, err := c.post(ctx, "/api/v1/accesstoken", bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -137,6 +146,52 @@ func (c *AccessTokenClient) get(req auth.AccessTokenRequest) (*auth.AccessTokenR
 		return nil, fmt.Errorf("status code is %d: %s", resp.StatusCode, body.Status)
 	}
 	var body auth.AccessTokenResponse
+	if err := json.Unmarshal(data, &body); err != nil {
+		return nil, err
+	}
+	return &body, nil
+}
+
+type ResourceClient struct {
+	get func(ctx context.Context, path, token string) (*http.Response, error)
+}
+
+func NewResourceClient(resourceServerURI string) ResourceClient {
+	return ResourceClient{
+		get: func(ctx context.Context, path, token string) (*http.Response, error) {
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, resourceServerURI+path, nil)
+			if err != nil {
+				return nil, err
+			}
+			req.Header.Add("Authorization", "Bearer "+token)
+			return http.DefaultClient.Do(req)
+		},
+	}
+}
+
+func (c *ResourceClient) ViewProfile(ctx context.Context, token string) (*resource.ProfileGetResponse, error) {
+	resp, err := c.get(ctx, "/api/v1/profile", token)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		if resp.StatusCode == http.StatusUnauthorized {
+			return nil, resource.ErrAccessTokenExpired
+		}
+		var body struct {
+			Status string
+		}
+		if err := json.Unmarshal(data, &body); err != nil {
+			return nil, err
+		}
+		return nil, fmt.Errorf("status code is %d: %s", resp.StatusCode, body.Status)
+	}
+	var body resource.ProfileGetResponse
 	if err := json.Unmarshal(data, &body); err != nil {
 		return nil, err
 	}

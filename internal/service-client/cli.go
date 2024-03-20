@@ -17,10 +17,12 @@ type Brawser struct {
 
 	codeReceiver      CodeReceiver
 	accessTokenClient AccessTokenClient
+	resourceClient    ResourceClient
 
 	mu                     sync.Mutex
 	currentServiceClientId *string
 	accessTokens           map[string]string
+	refreshTokens          map[string]string
 }
 
 func (b *Brawser) Brawse(input string) (*output, error) {
@@ -62,7 +64,7 @@ func (b *Brawser) Brawse(input string) (*output, error) {
 		if ok := switchedAnySite; !ok {
 			return nil, errors.New("you have not logged in to any site")
 		}
-		profile, err := b.viewProfile()
+		profile, err := b.viewProfile(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("canno get profile: %w", err)
 		}
@@ -101,7 +103,7 @@ func (b *Brawser) login(ctx context.Context) error {
 	slog.InfoContext(ctx, "receive Authorization Code!")
 
 	// get accesstoken
-	token, err := b.accessTokenClient.GetByCode(codeResult.code, AccessTokenRequestParam{
+	token, err := b.accessTokenClient.GetByCode(ctx, codeResult.code, AccessTokenRequestParam{
 		ClientId:     *b.currentServiceClientId,
 		ClientSecret: database.CLIENT_SECRET,
 	})
@@ -110,13 +112,44 @@ func (b *Brawser) login(ctx context.Context) error {
 	}
 	slog.InfoContext(ctx, "get Access Token!")
 	b.accessTokens[*b.currentServiceClientId] = token.AccessToken
+	b.refreshTokens[*b.currentServiceClientId] = token.RefreshToken
 	return nil
 }
 
-func (b *Brawser) viewProfile() (map[string]any, error) {
-	var profile map[string]any
-	// TODO create client
+func (b *Brawser) viewProfile(ctx context.Context) (map[string]any, error) {
+	token, found := b.accessTokens[*b.currentServiceClientId]
+	if !found {
+		return nil, fmt.Errorf("access token is not found")
+	}
+	p, err := b.resourceClient.ViewProfile(ctx, token)
+	if err != nil {
+		if err := b.refreshToken(ctx); err != nil {
+			return nil, fmt.Errorf("cannot get refresh token: %w", err)
+		}
+		if p, err = b.resourceClient.ViewProfile(ctx, token); err != nil {
+			return nil, fmt.Errorf("cannot get profile: %w", err)
+		}
+	}
+	var profile = map[string]any{}
+	profile["id"] = p.UserId
+	profile["age"] = p.Age
+	profile["profile"] = p.Profile
+	profile["name"] = p.Name
 	return profile, nil
+}
+
+func (b *Brawser) refreshToken(ctx context.Context) error {
+	refreshToken := b.refreshTokens[*b.currentServiceClientId]
+	token, err := b.accessTokenClient.GetByRefreshToken(ctx, refreshToken, AccessTokenRequestParam{
+		ClientId:     *b.currentServiceClientId,
+		ClientSecret: database.CLIENT_SECRET,
+	})
+	if err != nil {
+		return err
+	}
+	b.accessTokens[*b.currentServiceClientId] = token.AccessToken
+	b.refreshTokens[*b.currentServiceClientId] = token.RefreshToken
+	return nil
 }
 
 type (
