@@ -24,7 +24,7 @@ type (
 		refreshTokens          map[string]string
 	}
 	BrawserConfig struct {
-		RedirectURI       string
+		RedirectPort      int
 		AuthServerURI     string
 		ResourceServerURI string
 	}
@@ -32,7 +32,7 @@ type (
 
 func NewBrawser(config BrawserConfig) *Brawser {
 	var b Brawser
-	b.codeReceiver = NewCodeReceiver(config.RedirectURI)
+	b.codeReceiver = NewCodeReceiver(config.RedirectPort)
 	b.accessTokenClient = NewAccessTokenClient(config.AuthServerURI)
 	b.resourceClient = NewResourceClient(config.ResourceServerURI)
 
@@ -112,14 +112,24 @@ func (b *Brawser) login(ctx context.Context) error {
 	defer cancel()
 	b.codeReceiver.Init()
 	b.codeReceiver.Start(timeoutCtx)
-	codeResult := b.codeReceiver.Receive()
-	if codeResult.err != nil {
-		return fmt.Errorf("cannot receive authorization code: %w", codeResult.err)
+
+	var code string
+	select {
+	case codeResult, ok := <-b.codeReceiver.Receive():
+		if !ok {
+			return fmt.Errorf("chan is canceled")
+		}
+		if codeResult.err != nil {
+			return fmt.Errorf("cannot receive authorization code: %w", codeResult.err)
+		}
+		code = codeResult.code
+	case <-ctx.Done():
+		return context.Cause(ctx)
 	}
 	slog.InfoContext(ctx, "receive Authorization Code!")
 
 	// get accesstoken
-	token, err := b.accessTokenClient.GetByCode(ctx, codeResult.code, AccessTokenRequestParam{
+	token, err := b.accessTokenClient.GetByCode(ctx, code, AccessTokenRequestParam{
 		ClientId:     *b.currentServiceClientId,
 		ClientSecret: database.CLIENT_SECRET,
 	})

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/yyyoichi/OhAuth0.1/internal/auth"
 	"github.com/yyyoichi/OhAuth0.1/internal/resource"
@@ -15,9 +16,9 @@ import (
 
 type (
 	CodeReceiver struct {
-		HostURI string
-		codeCh  chan codeResult
-		closed  bool
+		Port   string
+		codeCh chan codeResult
+		closed bool
 	}
 	codeResult struct {
 		code string
@@ -25,9 +26,10 @@ type (
 	}
 )
 
-func NewCodeReceiver(uri string) CodeReceiver {
+func NewCodeReceiver(port int) CodeReceiver {
 	b := CodeReceiver{}
 	b.Init()
+	b.Port = ":" + strconv.Itoa(port)
 	return b
 }
 
@@ -35,17 +37,21 @@ func (b *CodeReceiver) Start(ctx context.Context) {
 	if b.closed {
 		panic("please Init()")
 	}
-	http.ListenAndServe(b.HostURI, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			b.closed = true
-			close(b.codeCh)
-		}()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
+		defer func() {
+			b.closed = true
+			close(b.codeCh)
+		}()
 		code := r.URL.Query().Get("code")
-		if code != "" {
+		if code == "" {
 			b.codeCh <- codeResult{
 				err: errors.New("code is empty"),
 			}
@@ -67,10 +73,30 @@ func (b *CodeReceiver) Start(ctx context.Context) {
 			return
 		}
 	}))
+	go func() {
+		if err := http.ListenAndServe(b.Port, mux); err != nil {
+			panic(err)
+		}
+	}()
+	connected := make(chan struct{})
+	go func() {
+		defer close(connected)
+		for {
+			resp, err := http.DefaultClient.Get("http://localhost" + b.Port + "/status")
+			if err != nil {
+				continue
+			}
+			if resp.StatusCode != http.StatusOK {
+				continue
+			}
+			return
+		}
+	}()
+	<-connected
 }
 
-func (b *CodeReceiver) Receive() codeResult {
-	return <-b.codeCh
+func (b *CodeReceiver) Receive() <-chan codeResult {
+	return b.codeCh
 }
 
 func (b *CodeReceiver) Init() {
