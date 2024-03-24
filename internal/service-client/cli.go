@@ -10,18 +10,22 @@ import (
 	"time"
 
 	"github.com/yyyoichi/OhAuth0.1/internal/database"
+	"github.com/yyyoichi/OhAuth0.1/internal/resource"
 )
 
 type (
 	Brawser struct {
 		codeReceiver      CodeReceiver
 		accessTokenClient AccessTokenClient
-		resourceClient    ResourceClient
+		resourceClient    resourceClientInterface
 
-		mu                     sync.Mutex
+		mu                     *sync.Mutex
 		currentServiceClientId *string
 		accessTokens           map[string]string
 		refreshTokens          map[string]string
+	}
+	resourceClientInterface interface {
+		ViewProfile(ctx context.Context, token string) (*resource.ProfileGetResponse, error)
 	}
 	BrawserConfig struct {
 		RedirectPort      int
@@ -34,9 +38,10 @@ func NewBrawser(config BrawserConfig) *Brawser {
 	var b Brawser
 	b.codeReceiver = NewCodeReceiver(config.RedirectPort)
 	b.accessTokenClient = NewAccessTokenClient(config.AuthServerURI)
-	b.resourceClient = NewResourceClient(config.ResourceServerURI)
+	resourceClient := NewResourceClient(config.ResourceServerURI)
+	b.resourceClient = &resourceClient
 
-	b.mu = sync.Mutex{}
+	b.mu = &sync.Mutex{}
 	b.currentServiceClientId = nil
 	b.accessTokens = map[string]string{}
 	b.refreshTokens = map[string]string{}
@@ -45,7 +50,6 @@ func NewBrawser(config BrawserConfig) *Brawser {
 
 func (b *Brawser) Brawse(ctx context.Context, input string) (*output, error) {
 	command := ParseCommand(input)
-	switchedAnySite := b.currentServiceClientId == nil
 
 	switch command.command {
 	case help:
@@ -59,27 +63,20 @@ func (b *Brawser) Brawse(ctx context.Context, input string) (*output, error) {
 		if id != "500" && id != "501" {
 			return nil, errors.New("unknown site id")
 		}
-		b.moveToServiceClient(id)
+		_ = b.moveToServiceClient(id)
 		return newSwitchSiteOutput(id), nil
 	case login:
-		if ok := switchedAnySite; !ok {
-			return nil, errors.New("please switch site")
-		}
 		if err := b.login(ctx); err != nil && errors.Is(err, ErrAlreadyLogin) {
 			return nil, fmt.Errorf("cannot login: %w", err)
 		}
 		return newLoginSuccededOutput(*b.currentServiceClientId), nil
 	case logout:
-		if ok := switchedAnySite; !ok {
-			return nil, errors.New("you have not logged in to any site")
-		}
 		id := *b.currentServiceClientId
-		b.logout()
+		if err := b.logout(); err != nil {
+			return nil, fmt.Errorf("cannot logout: %w", err)
+		}
 		return newLogoutOutput(id), nil
 	case viewProfile:
-		if ok := switchedAnySite; !ok {
-			return nil, errors.New("you have not logged in to any site")
-		}
 		profile, err := b.viewProfile(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("canno get profile: %w", err)
@@ -90,21 +87,30 @@ func (b *Brawser) Brawse(ctx context.Context, input string) (*output, error) {
 	return nil, errors.New("unknown command")
 }
 
-func (b *Brawser) moveToServiceClient(id string) {
+func (b *Brawser) moveToServiceClient(id string) error {
 	b.currentServiceClientId = &id
-}
-func (b *Brawser) logout() {
-	delete(b.accessTokens, *b.currentServiceClientId)
+	return nil
 }
 
 var (
+	ErrNoSite       = errors.New("no switched site")
 	ErrAlreadyLogin = errors.New("already login")
 )
+
+func (b *Brawser) logout() error {
+	if b.currentServiceClientId == nil {
+		return ErrNoSite
+	}
+	delete(b.accessTokens, *b.currentServiceClientId)
+	return nil
+}
 
 func (b *Brawser) login(ctx context.Context) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
+	if b.currentServiceClientId == nil {
+		return ErrNoSite
+	}
 	if _, found := b.accessTokens[*b.currentServiceClientId]; found {
 		return ErrAlreadyLogin
 	}
@@ -143,17 +149,23 @@ func (b *Brawser) login(ctx context.Context) error {
 }
 
 func (b *Brawser) viewProfile(ctx context.Context) (map[string]any, error) {
+	if b.currentServiceClientId == nil {
+		return nil, ErrNoSite
+	}
 	token, found := b.accessTokens[*b.currentServiceClientId]
 	if !found {
 		return nil, fmt.Errorf("access token is not found")
 	}
 	p, err := b.resourceClient.ViewProfile(ctx, token)
 	if err != nil {
+		if !errors.Is(err, resource.ErrAccessTokenExpired) {
+			return nil, fmt.Errorf("cannot view profile: %w", err)
+		}
 		if err := b.refreshToken(ctx); err != nil {
 			return nil, fmt.Errorf("cannot get refresh token: %w", err)
 		}
-		if p, err = b.resourceClient.ViewProfile(ctx, token); err != nil {
-			return nil, fmt.Errorf("cannot get profile: %w", err)
+		if p, err = b.resourceClient.ViewProfile(ctx, b.accessTokens[*b.currentServiceClientId]); err != nil {
+			return nil, fmt.Errorf("cannot view profile: %w", err)
 		}
 	}
 	var profile = map[string]any{}
@@ -165,7 +177,13 @@ func (b *Brawser) viewProfile(ctx context.Context) (map[string]any, error) {
 }
 
 func (b *Brawser) refreshToken(ctx context.Context) error {
-	refreshToken := b.refreshTokens[*b.currentServiceClientId]
+	if b.currentServiceClientId == nil {
+		return ErrNoSite
+	}
+	refreshToken, found := b.refreshTokens[*b.currentServiceClientId]
+	if !found {
+		return fmt.Errorf("refresh token is not found")
+	}
 	token, err := b.accessTokenClient.GetByRefreshToken(ctx, refreshToken, AccessTokenRequestParam{
 		ClientId:     *b.currentServiceClientId,
 		ClientSecret: database.CLIENT_SECRET,
