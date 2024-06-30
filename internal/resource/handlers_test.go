@@ -119,7 +119,7 @@ func TestHandlerAuthorizationStatus(t *testing.T) {
 					assert.NoError(t, err)
 					return server_test.WithHeader("Authorization", "Bearer "+accesstoken)
 				}()},
-			expCode: http.StatusBadRequest,
+			expCode: http.StatusUnauthorized,
 		},
 	}
 	for scenario, tt := range test {
