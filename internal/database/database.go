@@ -18,6 +18,28 @@ type Database struct {
 	mu                      sync.Mutex
 }
 
+const (
+	CLIENT_SECRET = "secret"
+	REDIRECT_URI  = "http://localhost:7777"
+)
+
+var (
+	MockServiceClient500 = apiv1.ServiceClient{
+		Id:          "500",
+		Name:        "Professional Q&A",
+		Secret:      CLIENT_SECRET,
+		RedirectUri: REDIRECT_URI,
+		Scope:       "profile:view",
+	}
+	MockServiceClient501 = apiv1.ServiceClient{
+		Id:          "501",
+		Name:        "Complete Offece",
+		Secret:      CLIENT_SECRET,
+		RedirectUri: REDIRECT_URI,
+		Scope:       "profile:view",
+	}
+)
+
 func NewDatabase() (*Database, error) {
 	var db Database
 	db.userById = map[string]*apiv1.UserProfile{
@@ -37,20 +59,19 @@ func NewDatabase() (*Database, error) {
 		},
 	}
 	db.serviceClientById = map[string]*apiv1.ServiceClient{
-		// TODO set RedirectURI
 		"500": {
-			Id:          "500",
-			Secret:      "secret",
-			Name:        "ABC-App",
-			RedirectUri: "",
-			Scope:       "profile:view",
+			Id:          MockServiceClient500.Id,
+			Name:        MockServiceClient500.Name,
+			Secret:      MockServiceClient500.Secret,
+			RedirectUri: MockServiceClient500.RedirectUri,
+			Scope:       MockServiceClient500.Scope,
 		},
 		"501": {
-			Id:          "501",
-			Secret:      "secret",
-			Name:        "ZZZ-App",
-			RedirectUri: "",
-			Scope:       "profile:view",
+			Id:          MockServiceClient501.Id,
+			Name:        MockServiceClient501.Name,
+			Secret:      MockServiceClient501.Secret,
+			RedirectUri: MockServiceClient501.RedirectUri,
+			Scope:       MockServiceClient501.Scope,
 		},
 	}
 	db.authorizationCodeByCode = make(map[string]*apiv1.AuthorizationCode)

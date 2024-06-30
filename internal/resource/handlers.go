@@ -23,24 +23,24 @@ func SetupRouter(service *Service) *gin.Engine {
 	v1.Use(func(ctx *gin.Context) {
 		var h HeaderRequest
 		if err := ctx.ShouldBindHeader(&h); err != nil {
-			ctx.SecureJSON(http.StatusForbidden, enging.ForbiddenErrorMssage)
+			ctx.SecureJSON(http.StatusForbidden, enging.ForbiddenErrorMessage)
 			return
 		}
 		accesstoken, err := h.FilterToken()
 		if err != nil {
 			slog.InfoContext(ctx, fmt.Sprintf("has not header: %v", err), slog.String("error", err.Error()), slog.String("Authorization", h.Authorization))
-			ctx.SecureJSON(http.StatusForbidden, enging.ForbiddenErrorMssage)
+			ctx.SecureJSON(http.StatusForbidden, enging.ForbiddenErrorMessage)
 			return
 		}
 		token, err := service.VerifyAccessToken(ctx, accesstoken)
 		if err != nil {
 			slog.InfoContext(ctx, "cannot varify accesstoken", slog.String("error", err.Error()), slog.String("access token", accesstoken))
 			if errors.Is(err, database.ErrNotFound) {
-				ctx.SecureJSON(http.StatusForbidden, enging.ForbiddenErrorMssage)
+				ctx.SecureJSON(http.StatusForbidden, enging.ForbiddenErrorMessage)
 				return
 			}
 			if errors.Is(err, ErrAccessTokenExpired) {
-				ctx.SecureJSON(http.StatusBadRequest, enging.BadRequestMessage)
+				ctx.SecureJSON(http.StatusUnauthorized, enging.StatusUnauthorizedErrorMessage)
 				return
 			}
 			ctx.SecureJSON(http.StatusInternalServerError, enging.InternalServerErrorMessage)

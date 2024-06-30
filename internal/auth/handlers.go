@@ -160,7 +160,7 @@ func SetupRouter(service *Service, allowOrigins ...string) *gin.Engine {
 		if err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("cannot get tokens: %v", err))
 			if errors.Is(err, ErrAuthorizationCodeExpired) || errors.Is(err, ErrRefreshTokenExpired) {
-				ctx.SecureJSON(http.StatusBadRequest, gin.H{"error": "invalid_grant"})
+				ctx.SecureJSON(http.StatusUnauthorized, enging.StatusUnauthorizedErrorMessage)
 				return
 			}
 			ctx.SecureJSON(http.StatusInternalServerError, enging.InternalServerErrorMessage)

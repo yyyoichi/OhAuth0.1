@@ -19,7 +19,7 @@ func TestHandlerOK(t *testing.T) {
 	service := &Service{
 		client: db,
 	}
-	router := SetupRouter(service)
+	router := SetupRouter(service, "*")
 	test := map[string]struct {
 		config  server_test.Config
 		options []server_test.Option
