@@ -26,14 +26,14 @@ const (
 var (
 	MockServiceClient500 = apiv1.ServiceClient{
 		Id:          "500",
-		Name:        "ABC-App",
+		Name:        "Professional Q&A",
 		Secret:      CLIENT_SECRET,
 		RedirectUri: REDIRECT_URI,
 		Scope:       "profile:view",
 	}
 	MockServiceClient501 = apiv1.ServiceClient{
 		Id:          "501",
-		Name:        "ZZZ-Org",
+		Name:        "Complete Offece",
 		Secret:      CLIENT_SECRET,
 		RedirectUri: REDIRECT_URI,
 		Scope:       "profile:view",
