@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,66 +16,50 @@ import (
 type (
 	CodeReceiver struct {
 		Port   string
-		codeCh chan codeResult
-		closed bool
-	}
-	codeResult struct {
-		code string
-		err  error
+		codeCh chan string
 	}
 )
 
 func NewCodeReceiver(port int) CodeReceiver {
-	b := CodeReceiver{}
-	b.Init()
+	var b CodeReceiver
 	b.Port = ":" + strconv.Itoa(port)
+	b.codeCh = make(chan string)
 	return b
 }
 
 func (b *CodeReceiver) Start(ctx context.Context) {
-	if b.closed {
-		panic("please Init()")
-	}
+	ctx, cancel := context.WithCancel(ctx)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	mux.HandleFunc("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		defer func() {
-			b.closed = true
-			close(b.codeCh)
-		}()
+		defer cancel()
+
 		code := r.URL.Query().Get("code")
-		if code == "" {
-			b.codeCh <- codeResult{
-				err: errors.New("code is empty"),
-			}
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 		select {
 		case <-ctx.Done():
-			b.codeCh <- codeResult{
-				err: context.Cause(ctx),
-			}
 			w.WriteHeader(http.StatusRequestTimeout)
 			return
 		default:
-			b.codeCh <- codeResult{
-				code: code,
-			}
+			b.codeCh <- code
 			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK!"))
 			return
 		}
 	}))
+	server := &http.Server{
+		Addr:    b.Port,
+		Handler: mux,
+	}
 	go func() {
-		if err := http.ListenAndServe(b.Port, mux); err != nil {
-			panic(err)
-		}
+		server.ListenAndServe()
+	}()
+	go func() {
+		<-ctx.Done()
+		close(b.codeCh)
+		server.Shutdown(context.Background())
 	}()
 	connected := make(chan struct{})
 	go func() {
@@ -95,13 +78,8 @@ func (b *CodeReceiver) Start(ctx context.Context) {
 	<-connected
 }
 
-func (b *CodeReceiver) Receive() <-chan codeResult {
+func (b *CodeReceiver) Receive() <-chan string {
 	return b.codeCh
-}
-
-func (b *CodeReceiver) Init() {
-	b.codeCh = make(chan codeResult)
-	b.closed = false
 }
 
 type (

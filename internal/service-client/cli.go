@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -15,9 +14,10 @@ import (
 
 type (
 	Brawser struct {
-		codeReceiver      CodeReceiver
+		codeReceiverPost  int
 		accessTokenClient AccessTokenClient
 		resourceClient    resourceClientInterface
+		authUiURI         string
 
 		mu                     *sync.Mutex
 		currentServiceClientId *string
@@ -31,15 +31,17 @@ type (
 		RedirectPort      int
 		AuthServerURI     string
 		ResourceServerURI string
+		AuthUIURI         string
 	}
 )
 
 func NewBrawser(config BrawserConfig) *Brawser {
 	var b Brawser
-	b.codeReceiver = NewCodeReceiver(config.RedirectPort)
+	b.codeReceiverPost = config.RedirectPort
 	b.accessTokenClient = NewAccessTokenClient(config.AuthServerURI)
 	resourceClient := NewResourceClient(config.ResourceServerURI)
 	b.resourceClient = &resourceClient
+	b.authUiURI = config.AuthUIURI
 
 	b.mu = &sync.Mutex{}
 	b.currentServiceClientId = nil
@@ -55,7 +57,7 @@ func (b *Brawser) Brawse(ctx context.Context, input string) (*output, error) {
 	case help:
 		return helpOutput, nil
 	case status:
-		return newStatusOutput(b.accessTokens, *b.currentServiceClientId), nil
+		return newStatusOutput(b.accessTokens, b.currentServiceClientId), nil
 	case showSites:
 		return showSitesOutput, nil
 	case switchsite:
@@ -66,7 +68,7 @@ func (b *Brawser) Brawse(ctx context.Context, input string) (*output, error) {
 		_ = b.moveToServiceClient(id)
 		return newSwitchSiteOutput(id), nil
 	case login:
-		if err := b.login(ctx); err != nil && errors.Is(err, ErrAlreadyLogin) {
+		if err := b.login(ctx); err != nil && !errors.Is(err, ErrAlreadyLogin) {
 			return nil, fmt.Errorf("cannot login: %w", err)
 		}
 		return newLoginSuccededOutput(*b.currentServiceClientId), nil
@@ -116,23 +118,21 @@ func (b *Brawser) login(ctx context.Context) error {
 	}
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(3)*time.Minute)
 	defer cancel()
-	b.codeReceiver.Init()
-	b.codeReceiver.Start(timeoutCtx)
+	codeReceiver := NewCodeReceiver(b.codeReceiverPost)
+	codeReceiver.Start(timeoutCtx)
+
+	fmt.Printf("\n🚀Open %s?clinet_id=%s in your brawer.", b.authUiURI, *b.currentServiceClientId)
 
 	var code string
 	select {
-	case codeResult, ok := <-b.codeReceiver.Receive():
+	case c, ok := <-codeReceiver.Receive():
 		if !ok {
 			return fmt.Errorf("chan is canceled")
 		}
-		if codeResult.err != nil {
-			return fmt.Errorf("cannot receive authorization code: %w", codeResult.err)
-		}
-		code = codeResult.code
+		code = c
 	case <-ctx.Done():
 		return context.Cause(ctx)
 	}
-	slog.InfoContext(ctx, "receive Authorization Code!")
 
 	// get accesstoken
 	token, err := b.accessTokenClient.GetByCode(ctx, code, AccessTokenRequestParam{
@@ -142,7 +142,6 @@ func (b *Brawser) login(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("cannot get accesstoken: %w", err)
 	}
-	slog.InfoContext(ctx, "get Access Token!")
 	b.accessTokens[*b.currentServiceClientId] = token.AccessToken
 	b.refreshTokens[*b.currentServiceClientId] = token.RefreshToken
 	return nil
@@ -268,25 +267,31 @@ var (
 `,
 	}
 
-	newStatusOutput = func(tokens map[string]string, currentId string) *output {
+	newStatusOutput = func(tokens map[string]string, currentId *string) *output {
 		if len(tokens) == 0 {
 			return &output{
 				messageId: statusMsgId,
 				message: `
 You have not logged in to any site.
-				`,
+`,
 			}
 		}
 		ids := make([]string, 0, len(tokens))
 		for id := range tokens {
 			ids = append(ids, id)
 		}
+		var brawsing string
+		if currentId != nil {
+			brawsing = fmt.Sprintf("and now you're browsing %s.", *currentId)
+		} else {
+			brawsing = "."
+		}
 		return &output{
 			messageId: statusMsgId,
 			message: fmt.Sprintf(`
 You're logged in to site %v 
-and now you're browsing %s.
-			`, ids, currentId),
+%s.
+`, ids, brawsing),
 		}
 	}
 
@@ -362,3 +367,7 @@ logout from %s
 		}
 	}
 )
+
+func (o output) Msg() string {
+	return o.message
+}

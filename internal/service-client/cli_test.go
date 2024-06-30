@@ -116,7 +116,7 @@ func TestRetryVeiwProfile(t *testing.T) {
 
 func newBrawserMock(t *testing.T) Brawser {
 	var brawser Brawser
-	brawser.codeReceiver = NewCodeReceiver(9010)
+	brawser.codeReceiverPost = 9010
 	brawser.accessTokenClient = func() AccessTokenClient {
 		resp := httptest.NewRecorder()
 		resp.WriteHeader(http.StatusOK)

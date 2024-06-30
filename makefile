@@ -47,7 +47,11 @@ start:
 	make drun > $(LATEST_LOG_DIR)/database-$(NOW).log & \
 	make arun > $(LATEST_LOG_DIR)/auth-$(NOW).log & \
 	make srun > $(LATEST_LOG_DIR)/resource-$(NOW).log & \
-	make uirun > $(LATEST_LOG_DIR)/ui-$(NOW).log;
+	make buildui > $(LATEST_LOG_DIR)/ui-$(NOW).log && make uirun >> $(LATEST_LOG_DIR)/ui-$(NOW).log;
+
+cli:
+	@echo "\n🔨example service client app\n"
+	go run cmd/app/main.go -source ${ENV_PATH}
 
 rm-old-logs:
 	rm -rf $(OLD_LOG_DIR)/*
